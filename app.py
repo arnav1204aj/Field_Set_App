@@ -148,11 +148,11 @@ try:
         # Display Individual Fielder Contributions
         st.subheader("Individual Fielder Contribution")
         
-        with st.expander("Infielders (vs. Total Running EV)"):
+        with st.expander("Infielders (and Running Saved %)"):
             for fielder in data.get('infielder_ev_run_percent', []):
                 st.write(f"**Angle {fielder['angle']}°:** Saves {fielder.get('ev_run_percent', 0):.1f}%")
 
-        with st.expander("Outfielders (vs. Total Boundary EV)"):
+        with st.expander("Outfielders (and Boundary Saved %)"):
             for fielder in data.get('outfielder_ev_bd_percent', []):
                 st.write(f"**Angle {fielder['angle']}°:** Saves {fielder.get('ev_bd_percent', 0):.1f}%")
 
