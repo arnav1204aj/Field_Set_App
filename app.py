@@ -83,7 +83,7 @@ st.title("🏏 Optimal Cricket Field Setting")
 
 # --- Load data from the binary file 'field_dict.bin' ---
 try:
-    with open('field_dict.bin', 'rb') as f:
+    with open('field_dict_global.bin', 'rb') as f:
         field_dict = pickle.load(f)
 except FileNotFoundError:
     st.error("Error: The data file 'field_dict.bin' was not found.")
