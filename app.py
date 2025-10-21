@@ -191,7 +191,7 @@ with tab2:
     st.markdown("""
 **How are optimal field settings and individual fielder contributions calculated?**  
 A sector-based distribution of the batter's running and boundary runs is calculated.  
-Fielders are then placed *greedily*, keeping in mind the field restrictions and rules,  
+Fielders are then placed *greedily* using *Dynamic Programming*, keeping in mind the field restrictions and rules,  
 to **maximize the overall protection percentage**.  
 Each fielder protects runs in their coverage area.
 
