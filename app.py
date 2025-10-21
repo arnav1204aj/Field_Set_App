@@ -101,83 +101,115 @@ field_dict_odi = load_field_dict('field_dict_odi.bin')
 # ─────────────────────────────
 st.title("🏏 Optimal Cricket Field Setting")
 
-# Unified format selector
-format_choice = st.radio("Select Format", ["T20", "ODI"], horizontal=True)
+# Tabs: Main app + Info tab
+tab1, tab2 = st.tabs(["Field Visualizer", "ℹ️ Info"])
 
-# Load correct dataset
-field_dict = field_dict_t20 if format_choice == "T20" else field_dict_odi
-if not field_dict:
-    st.error(f"No data available for {format_choice}.")
-    st.stop()
+with tab1:
+    # Unified format selector
+    format_choice = st.radio("Select Format", ["T20", "ODI"], horizontal=True)
 
-# Sidebar selection
-with st.sidebar:
-    st.header(f"{format_choice} Parameters")
+    # Load correct dataset
+    field_dict = field_dict_t20 if format_choice == "T20" else field_dict_odi
+    if not field_dict:
+        st.error(f"No data available for {format_choice}.")
+        st.stop()
 
-    batter_list = list(field_dict.keys())
-    selected_batter = st.selectbox("Select Batter", batter_list)
+    # Sidebar selection
+    with st.sidebar:
+        st.header(f"{format_choice} Parameters")
 
-    bowl_kind_list = list(field_dict[selected_batter].keys())
-    selected_bowl_kind = st.selectbox("Select Bowling Type", bowl_kind_list)
+        batter_list = list(field_dict.keys())
+        selected_batter = st.selectbox("Select Batter", batter_list)
 
-    length_list = list(field_dict[selected_batter][selected_bowl_kind].keys())
-    selected_length = st.selectbox("Select Length", length_list)
+        bowl_kind_list = list(field_dict[selected_batter].keys())
+        selected_bowl_kind = st.selectbox("Select Bowling Type", bowl_kind_list)
 
-    outfielder_list = list(field_dict[selected_batter][selected_bowl_kind][selected_length].keys())
-    selected_outfielders = st.selectbox("Select Outfielders", outfielder_list)
+        length_list = list(field_dict[selected_batter][selected_bowl_kind].keys())
+        selected_length = st.selectbox("Select Length", length_list)
+
+        outfielder_list = list(field_dict[selected_batter][selected_bowl_kind][selected_length].keys())
+        selected_outfielders = st.selectbox("Select Outfielders", outfielder_list)
+
+    # ─────────────────────────────
+    # Display section
+    # ─────────────────────────────
+    try:
+        data = field_dict[selected_batter][selected_bowl_kind][selected_length][selected_outfielders]
+
+        # ROW 1 → Field Plot (left) + Fielder Contributions (right)
+        col1, col2 = st.columns([1.6, 1.4])
+
+        with col1:
+            st.subheader("🟢 Field Placement")
+            fig = plot_field_setting(data)
+            st.pyplot(fig, use_container_width=True)
+
+        with col2:
+            st.subheader("🧤 Fielder Contributions")
+
+            inf_contrib = data.get('infielder_ev_run_percent', [])
+            out_contrib = data.get('outfielder_ev_bd_percent', [])
+
+            inf_col, out_col = st.columns(2)
+
+            with inf_col:
+                st.markdown("**Infielders (Running Saved %)**")
+                if inf_contrib:
+                    for f in inf_contrib:
+                        st.write(f"Angle {f['angle']}° → `{f.get('ev_run_percent', 0):.1f}%`")
+                else:
+                    st.write("_No infielder data_")
+
+            with out_col:
+                st.markdown("**Outfielders (Boundary Saved %)**")
+                if out_contrib:
+                    for f in out_contrib:
+                        st.write(f"Angle {f['angle']}° → `{f.get('ev_bd_percent', 0):.1f}%`")
+                else:
+                    st.write("_No outfielder data_")
+
+        st.markdown("---")
+
+        # ROW 2 → Protection Stats
+        stats = data['protection_stats']
+        c1, c2, c3 = st.columns(3)
+        c1.metric("🛡️ Overall Protection", f"{stats.get('overall', 0):.1f}%")
+        c2.metric("🏃‍♂️ Running Protection", f"{stats.get('running', 0):.1f}%")
+        c3.metric("💥 Boundary Protection", f"{stats.get('boundary', 0):.1f}%")
+
+    except KeyError:
+        st.error("No data for this combination.")
+    except Exception as e:
+        st.error(f"Unexpected error: {e}")
 
 
 # ─────────────────────────────
-# Display section
+# Info Tab
 # ─────────────────────────────
-try:
-    data = field_dict[selected_batter][selected_bowl_kind][selected_length][selected_outfielders]
+with tab2:
+    st.header("📘 How are optimal field settings and fielder contributions calculated?")
+    st.markdown("""
+**How are optimal field settings and individual fielder contributions calculated?**  
+A sector-based distribution of the batter's running and boundary runs is calculated.  
+Fielders are then placed *greedily*, keeping in mind the field restrictions and rules,  
+to **maximize the overall protection percentage**.  
+Each fielder protects runs in their coverage area.
 
-    # ROW 1 → Field Plot (left) + Fielder Contributions (right)
-    col1, col2 = st.columns([1.6, 1.4])
+---
 
-    with col1:
-        st.subheader("🟢 Field Placement")
-        fig = plot_field_setting(data)
-        st.pyplot(fig, use_container_width=True)
+**What are the special fielder categories?**
 
-    with col2:
-        st.subheader("🧤 Fielder Contributions")
+- 🟥 **30 Yard Wall** – Your best infielder, placed where most grounded shots are expected.  
+- 🟧 **Sprinter** – The best runner, placed where batters tend to hit and run singles/doubles in the outfield.  
+- 🟩 **Catcher** – The best catcher, placed where batters hit the most boundaries.  
+- 🟨 **Superfielder** – A combination of a sprinter and catcher, used if both positions coincide.
 
-        inf_contrib = data.get('infielder_ev_run_percent', [])
-        out_contrib = data.get('outfielder_ev_bd_percent', [])
+---
 
-        inf_col, out_col = st.columns(2)
+**Any source where I can read about this in detail?**  
+Posted on my Substack: [*The Sacred Nine Spots*](https://arnavj.substack.com/p/the-sacred-nine-spots)
+""")
 
-        with inf_col:
-            st.markdown("**Infielders (Running Saved %)**")
-            if inf_contrib:
-                for f in inf_contrib:
-                    st.write(f"Angle {f['angle']}° → `{f.get('ev_run_percent', 0):.1f}%`")
-            else:
-                st.write("_No infielder data_")
-
-        with out_col:
-            st.markdown("**Outfielders (Boundary Saved %)**")
-            if out_contrib:
-                for f in out_contrib:
-                    st.write(f"Angle {f['angle']}° → `{f.get('ev_bd_percent', 0):.1f}%`")
-            else:
-                st.write("_No outfielder data_")
-
-    st.markdown("---")
-
-    # ROW 2 → Protection Stats
-    stats = data['protection_stats']
-    c1, c2, c3 = st.columns(3)
-    c1.metric("🛡️ Overall Protection", f"{stats.get('overall', 0):.1f}%")
-    c2.metric("🏃‍♂️ Running Protection", f"{stats.get('running', 0):.1f}%")
-    c3.metric("💥 Boundary Protection", f"{stats.get('boundary', 0):.1f}%")
-
-except KeyError:
-    st.error("No data for this combination.")
-except Exception as e:
-    st.error(f"Unexpected error: {e}")
 
 
 
