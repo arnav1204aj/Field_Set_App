@@ -500,7 +500,6 @@ with tab1:
             </p>
             ''', unsafe_allow_html=True)
             stats = data['protection_stats']
-            st.metric("OVERALL PROTECTION", f"{stats.get('overall', 0):.1f}%")
             st.metric("RUNNING PROTECTION", f"{stats.get('running', 0):.1f}%")
             st.metric("BOUNDARY PROTECTION", f"{stats.get('boundary', 0):.1f}%")
 
@@ -559,7 +558,7 @@ with tab2:
         Fielders are then placed <strong>greedily</strong> using <strong>Dynamic Programming</strong>, 
         keeping in mind the field restrictions and rules, to maximize the overall protection percentage. 
         Each fielder protects runs in their coverage area. <strong style="color: #26F7FD;">Protection stats show the percentage of runs saved
-        by the optimal field (Running for running class runs, Boundary for boundary class runs, Overall for both).</strong> Infielders protect running runs,
+        by the optimal field (Running for running class runs, Boundary for boundary class runs).</strong> Infielders protect running runs,
         while outfielders protect boundary runs.</p><h3 class="info-subtitle">Special Fielder Categories</h3><div class="special-category">
             <strong style="color: #dc2626;">30 Yard Wall</strong> — Your best infielder, placed where most grounded shots are expected.
         </div><div class="special-category">
