@@ -558,8 +558,9 @@ with tab2:
         A sector-based distribution of the batter's running and boundary runs is calculated. 
         Fielders are then placed <strong>greedily</strong> using <strong>Dynamic Programming</strong>, 
         keeping in mind the field restrictions and rules, to maximize the overall protection percentage. 
-        Each fielder protects runs in their coverage area.
-        </p><h3 class="info-subtitle">Special Fielder Categories</h3><div class="special-category">
+        Each fielder protects runs in their coverage area. <strong style="color: #26F7FD;">Protection stats show the percentage of runs saved
+        by the optimal field (Running for running class runs, Boundary for boundary class runs, Overall for both).</strong> Infielders protect running runs,
+        while outfielders protect boundary runs.</p><h3 class="info-subtitle">Special Fielder Categories</h3><div class="special-category">
             <strong style="color: #dc2626;">30 Yard Wall</strong> — Your best infielder, placed where most grounded shots are expected.
         </div><div class="special-category">
             <strong style="color: #f97316;">Sprinter</strong> — The best runner, placed where batters tend to hit and run singles/doubles in the outfield.
