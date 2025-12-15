@@ -472,7 +472,7 @@ with tab1:
                     for f in inf_contrib:
                         angle = f["angle"]
                         label = inf_labels.get(angle, f"Angle {angle}°")
-                        st.markdown(f'<div class="contribution-item">{label} → {f.get("ev_run_percent", 0):.1f}%</div>', unsafe_allow_html=True)
+                        st.markdown(f'<div class="contribution-item">{label} → {f.get("ev_run_percent", 0):.1f}% runs saved</div>', unsafe_allow_html=True)
                 else:
                     st.write("No data available")
 
@@ -482,7 +482,7 @@ with tab1:
                     for f in out_contrib:
                         angle = f["angle"]
                         label = out_labels.get(angle, f"Angle {angle}°")
-                        st.markdown(f'<div class="contribution-item">{label} → {f.get("ev_bd_percent", 0):.1f}%</div>', unsafe_allow_html=True)
+                        st.markdown(f'<div class="contribution-item">{label} → {f.get("ev_bd_percent", 0):.1f}% runs saved</div>', unsafe_allow_html=True)
                 else:
                     st.write("No data available")
 
