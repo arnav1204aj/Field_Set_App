@@ -300,7 +300,7 @@ def plot_field_setting(field_data):
     LIMIT = 350
     THIRTY_YARD_RADIUS_M = 171.25 * LIMIT / 500
 
-    fig, ax = plt.subplots(figsize=(8, 8), facecolor='#1a0a0a')
+    fig, ax = plt.subplots(figsize=(8, 8), facecolor='white')
     ax.set_facecolor('#166534')
 
     inside_info = field_data['infielder_positions']
@@ -409,6 +409,171 @@ def plot_field_setting(field_data):
 
     return fig, infielder_labels, outfielder_labels
 
+def plot_sector_ev_heatmap(
+    ev_dict, 
+    batter_name, 
+    selected_length, 
+    bowl_kind,
+    LIMIT=350, 
+    THIRTY_YARD_RADIUS_M=171.25 * 350 / 500
+):
+    """
+    Combined polar heatmap with red theme:
+    - Inner sector (≤30-yard): running EV (ev_run)
+    - Outer sector (>30-yard): boundary EV (ev_bd)
+    Both use a common color scale for consistent intensity interpretation.
+    """
+    try:
+        # Extract data
+        plot_theta_df = ev_dict[batter_name][selected_length][bowl_kind].copy()
+        theta_centers = plot_theta_df['theta_center_deg'].values % 360
+        ev_bd = plot_theta_df['ev_bd'].values
+        ev_run = plot_theta_df['ev_run'].values
+        band_width = 15
+
+        # Common normalization across both datasets
+        all_vals = np.concatenate([ev_bd, ev_run])
+        vmin, vmax = np.nanmin(all_vals), np.nanmax(all_vals)
+
+        # Create figure with dark background
+        fig = plt.figure(figsize=(8, 8), facecolor='#1a0a0a')
+        ax = fig.add_subplot(111, polar=True, facecolor='white')
+        
+        ax.set_theta_zero_location('N')
+        ax.set_theta_direction(-1)
+
+        # Custom red colormap (dark red to bright red/orange)
+        from matplotlib.colors import LinearSegmentedColormap
+        colors_list = ['#450a0a', '#991b1b', '#dc2626', '#f97316', '#fbbf24']
+        cmap = LinearSegmentedColormap.from_list('red_theme', colors_list, N=256)
+
+        # Inner ring (Running EV)
+        for theta, ev in zip(theta_centers, ev_run):
+            if not np.isnan(ev):
+                color = cmap((ev - vmin) / (vmax - vmin + 1e-9))
+                ax.bar(
+                    np.deg2rad(theta),
+                    THIRTY_YARD_RADIUS_M,
+                    width=np.deg2rad(band_width),
+                    bottom=0,
+                    color=color,
+                    edgecolor='white',
+                    linewidth=0.5,
+                    alpha=0.9
+                )
+
+        # Outer ring (Boundary EV)
+        for theta, ev in zip(theta_centers, ev_bd):
+            if not np.isnan(ev):
+                color = cmap((ev - vmin) / (vmax - vmin + 1e-9))
+                ax.bar(
+                    np.deg2rad(theta),
+                    LIMIT - THIRTY_YARD_RADIUS_M,
+                    width=np.deg2rad(band_width),
+                    bottom=THIRTY_YARD_RADIUS_M,
+                    color=color,
+                    edgecolor='white',
+                    linewidth=0.5,
+                    alpha=0.9
+                )
+
+        # Draw visual guides
+        inner_circle = plt.Circle(
+            (0, 0), THIRTY_YARD_RADIUS_M, 
+            color='white', fill=False, 
+            linestyle='--', linewidth=2.5, 
+            transform=ax.transData._b,
+            alpha=0.6
+        )
+        boundary_circle = plt.Circle(
+            (0, 0), LIMIT, 
+            color='white', fill=False, 
+            linewidth=3, 
+            transform=ax.transData._b,
+            alpha=0.8
+        )
+        ax.add_artist(inner_circle)
+        ax.add_artist(boundary_circle)
+
+        # Title styling
+        ax.set_title(
+            f"Sector Importance\n{selected_length} • {bowl_kind}",
+            fontsize=14, 
+            weight='bold', 
+            color='white',
+            pad=20
+        )
+        
+        # Axis styling
+        ax.set_xticks(np.deg2rad(np.arange(0, 360, 30)))
+        ax.set_xticklabels(
+            [f'{int(t)}°' for t in np.arange(0, 360, 30)], 
+            fontsize=9,
+            color='white',
+            weight='bold'
+        )
+        ax.grid(True, color='white', alpha=0.2, linewidth=0.5)
+        ax.set_yticklabels([])
+        ax.spines['polar'].set_color('white')
+        ax.spines['polar'].set_linewidth(2)
+
+        # Add labels for inner and outer rings
+        ax.text(
+            0, THIRTY_YARD_RADIUS_M / 2, 
+            'Running', 
+            ha='center', va='center',
+            fontsize=9, weight='bold', color='white',
+            bbox=dict(
+                facecolor='#2d1414', 
+                alpha=0.8, 
+                boxstyle='round,pad=0.5',
+                edgecolor='white',
+                linewidth=1
+            )
+        )
+        
+        ax.text(
+            np.pi, (THIRTY_YARD_RADIUS_M + LIMIT) / 2, 
+            'Boundary', 
+            ha='center', va='center',
+            fontsize=9, weight='bold', color='white',
+            bbox=dict(
+                facecolor='#2d1414', 
+                alpha=0.8, 
+                boxstyle='round,pad=0.5',
+                edgecolor='white',
+                linewidth=1
+            )
+        )
+
+        # Colorbar
+        sm = plt.cm.ScalarMappable(cmap=cmap)
+        sm.set_array(all_vals)
+        sm.set_clim(vmin, vmax)
+        
+        cbar = plt.colorbar(
+            sm, 
+            ax=ax, 
+            pad=0.1, 
+            fraction=0.046,
+            aspect=20
+        )
+        cbar.set_label(
+            'Importance', 
+            fontsize=10, 
+            color='white',
+            weight='bold'
+        )
+        cbar.ax.tick_params(colors='white', labelsize=9)
+        cbar.outline.set_edgecolor('white')
+        cbar.outline.set_linewidth(1.5)
+
+        plt.tight_layout()
+        return fig
+        
+    except Exception as e:
+        st.error(f"Error creating EV heatmap: {e}")
+        return None
 # ─────────────────────────────
 # Data loading
 # ─────────────────────────────
@@ -426,10 +591,20 @@ def load_players_data(path):
         return pd.read_csv(path)
     except FileNotFoundError:
         return pd.DataFrame(columns=['fullname', 'image_path'])
+    
+@st.cache_data
+def load_ev_dict(path):
+    try:
+        with open(path, 'rb') as f:
+            return pickle.load(f)
+    except FileNotFoundError:
+        st.warning("EVs.bin file not found. Sector importance plot will not be available.")
+        return {}
+
 
 field_dict_t20 = load_field_dict('field_dict_global.bin')
 players_df = load_players_data('players.csv')
-
+ev_dict = load_ev_dict('EVs.bin')
 # Create a mapping of player names to image URLs
 player_images = dict(zip(players_df['fullname'], players_df['image_path']))
 
@@ -540,6 +715,63 @@ with tab1:
                         st.markdown(f'<div class="contribution-item">{label} → {f.get("ev_bd_percent", 0):.1f}% runs saved</div>', unsafe_allow_html=True)
                 else:
                     st.write("No data available")
+        st.markdown("---")
+        
+        # SECTOR IMPORTANCE PLOT
+        if ev_dict and selected_batter in ev_dict:
+            st.markdown('<p class="section-header">Sector Importance Analysis</p>', unsafe_allow_html=True)
+            
+            # Wrapper with flexbox
+            st.markdown('<div style="display: flex; align-items: center; gap: 2rem;">', unsafe_allow_html=True)
+            
+            plot_col, info_col = st.columns([1.6, 1.4])
+            
+            with plot_col:
+                ev_fig = plot_sector_ev_heatmap(
+                    ev_dict,
+                    selected_batter,
+                    selected_length,
+                    selected_bowl_kind,
+                    LIMIT=350,
+                    THIRTY_YARD_RADIUS_M=171.25 * 350 / 500
+                )
+                if ev_fig:
+                    st.pyplot(ev_fig, use_container_width=True)
+            
+            with info_col:
+                st.markdown("""
+                <div style="
+                    background: linear-gradient(135deg, rgba(153, 27, 27, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%);
+                    padding: 1.5rem;
+                    border-radius: 12px;
+                    border: 1px solid rgba(220,38,38,0.3);
+                    height: 100%;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                ">
+                    <h3 style="color: #fca5a5; font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem;">
+                        Understanding the Heatmap
+                    </h3>
+                    <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem; margin-bottom: 1rem;">
+                        This polar heatmap shows the <strong>Importance (SR × Probability in that sector)</strong> of different sectors of the field.
+                    </p>
+                    <div style="margin: 0.8rem 0;">
+                        <strong style="color: #fca5a5;">Inner Ring:</strong>
+                        <span style="color: rgba(255,255,255,0.85);"> Running Class Runs</span>
+                    </div>
+                    <div style="margin: 0.8rem 0;">
+                        <strong style="color: #fca5a5;">Outer Ring:</strong>
+                        <span style="color: rgba(255,255,255,0.85);"> Boundary Class Runs</span>
+                    </div>
+                    <p style="color: rgba(255,255,255,0.75); font-size: 0.9rem; margin-top: 1rem; font-style: italic;">
+                        Brighter colors indicate higher sector importance and thus a priority region for the fielding teams.
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            st.markdown('</div>', unsafe_allow_html=True)
+          
 
     except KeyError:
         st.error("No data available for this combination.")
