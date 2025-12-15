@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import pickle
 
 # ─────────────────────────────
-# Custom CSS for RED premium design
+# Custom CSS for RED premium design with RESPONSIVE elements
 # ─────────────────────────────
 st.markdown("""
 <style>
@@ -20,10 +20,10 @@ st.markdown("""
         font-family: 'Inter', sans-serif;
     }
     
-    /* Header styling */
+    /* Header styling - RESPONSIVE */
     .main-header {
         background: linear-gradient(135deg, #991b1b 0%, #dc2626 100%);
-        padding: 2.5rem 2rem 2rem 2rem;
+        padding: clamp(1.5rem, 4vw, 2.5rem) clamp(1rem, 3vw, 2rem);
         border-radius: 16px;
         margin-bottom: 2rem;
         box-shadow: 0 10px 40px rgba(220,38,38,0.4);
@@ -31,7 +31,7 @@ st.markdown("""
     }
     
     .main-title {
-        font-size: 2.8rem;
+        font-size: clamp(1.8rem, 5vw, 2.8rem);
         font-weight: 800;
         color: white;
         margin: 0;
@@ -45,17 +45,18 @@ st.markdown("""
         margin-top: 1rem;
         padding-top: 1rem;
         border-top: 1px solid rgba(255,255,255,0.15);
+        flex-wrap: wrap;
     }
     
     .author-name {
-        font-size: 1rem;
+        font-size: clamp(0.85rem, 2vw, 1rem);
         font-weight: 600;
         color: rgba(255,255,255,0.95);
         margin: 0;
     }
     
     .author-link {
-        font-size: 0.9rem;
+        font-size: clamp(0.8rem, 1.8vw, 0.9rem);
         color: #fca5a5;
         text-decoration: none;
         padding: 0.3rem 0.8rem;
@@ -69,12 +70,12 @@ st.markdown("""
         color: #fecaca;
     }
     
-    /* Player name styling */
+    /* Player name styling - RESPONSIVE */
     .player-name {
-        font-size: 2.5rem;
+        font-size: clamp(1.5rem, 4vw, 2.5rem);
         font-weight: 800;
         color: white;
-        margin-bottom: 2rem;
+        margin-bottom: clamp(1rem, 3vw, 2rem);
         text-transform: uppercase;
         letter-spacing: 1px;
         text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
@@ -100,9 +101,9 @@ st.markdown("""
         border: none;
     }
     
-    /* Section headers */
+    /* Section headers - RESPONSIVE */
     .section-header {
-        font-size: 1.3rem;
+        font-size: clamp(1.1rem, 2.5vw, 1.3rem);
         font-weight: 700;
         color: white;
         margin-bottom: 1rem;
@@ -110,15 +111,15 @@ st.markdown("""
         border-bottom: 2px solid rgba(220, 38, 38, 0.5);
     }
     
-    /* Metric cards */
+    /* Metric cards - RESPONSIVE */
     [data-testid="stMetricValue"] {
-        font-size: 1.8rem;
+        font-size: clamp(1.3rem, 3vw, 1.8rem);
         font-weight: 700;
         color: #fca5a5;
     }
     
     [data-testid="stMetricLabel"] {
-        font-size: 0.85rem;
+        font-size: clamp(0.7rem, 1.5vw, 0.85rem);
         font-weight: 600;
         color: rgba(255,255,255,0.7);
         text-transform: uppercase;
@@ -127,7 +128,7 @@ st.markdown("""
     
     div[data-testid="metric-container"] {
         background: linear-gradient(135deg, rgba(153, 27, 27, 0.3) 0%, rgba(220, 38, 38, 0.3) 100%);
-        padding: 1.2rem;
+        padding: clamp(0.8rem, 2vw, 1.2rem);
         border-radius: 12px;
         border: 1px solid rgba(220,38,38,0.3);
         box-shadow: 0 4px 20px rgba(220,38,38,0.2);
@@ -144,7 +145,7 @@ st.markdown("""
         text-align: center;
     }
     
-    /* Contribution boxes */
+    /* Contribution boxes - RESPONSIVE */
     .contribution-box {
         background: rgba(220,38,38,0.08);
         padding: 1rem;
@@ -154,7 +155,7 @@ st.markdown("""
     }
     
     .contribution-title {
-        font-size: 0.85rem;
+        font-size: clamp(0.75rem, 1.5vw, 0.85rem);
         font-weight: 700;
         color: #fca5a5;
         text-transform: uppercase;
@@ -163,30 +164,30 @@ st.markdown("""
     }
     
     .contribution-item {
-        font-size: 0.9rem;
+        font-size: clamp(0.8rem, 1.6vw, 0.9rem);
         color: rgba(255,255,255,0.85);
         padding: 0.4rem 0;
         border-bottom: 1px solid rgba(220,38,38,0.1);
     }
     
-    /* Info section */
+    /* Info section - RESPONSIVE */
     .info-card {
         background: linear-gradient(135deg, rgba(153, 27, 27, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%);
-        padding: 2rem;
+        padding: clamp(1.5rem, 3vw, 2rem);
         border-radius: 12px;
         border: 1px solid rgba(220,38,38,0.3);
         margin-bottom: 1.5rem;
     }
     
     .info-title {
-        font-size: 1.8rem;
+        font-size: clamp(1.4rem, 3vw, 1.8rem);
         font-weight: 700;
         color: white;
         margin-bottom: 1rem;
     }
     
     .info-subtitle {
-        font-size: 1.2rem;
+        font-size: clamp(1rem, 2.2vw, 1.2rem);
         font-weight: 600;
         color: #fca5a5;
         margin: 1.5rem 0 0.8rem 0;
@@ -198,21 +199,23 @@ st.markdown("""
         border-radius: 8px;
         border-left: 4px solid #dc2626;
         margin: 0.8rem 0;
+        font-size: clamp(0.85rem, 1.8vw, 1rem);
     }
     
     /* Tab styling */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 1rem;
+        gap: clamp(0.5rem, 2vw, 1rem);
         background: transparent;
     }
     
     .stTabs [data-baseweb="tab"] {
         background: rgba(220,38,38,0.1);
         border-radius: 8px;
-        padding: 0.8rem 1.5rem;
+        padding: clamp(0.6rem, 1.5vw, 0.8rem) clamp(1rem, 2.5vw, 1.5rem);
         font-weight: 600;
         color: rgba(255,255,255,0.7);
         border: 1px solid rgba(220,38,38,0.2);
+        font-size: clamp(0.85rem, 1.8vw, 1rem);
     }
     
     .stTabs [aria-selected="true"] {
@@ -230,6 +233,62 @@ st.markdown("""
     /* Select box dropdown */
     .stSelectbox [data-baseweb="select"] > div {
         background: #000000 !important;
+    }
+    
+    /* RESPONSIVE: Mobile adjustments */
+    @media (max-width: 768px) {
+        .main-header {
+            padding: 1.5rem 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+       
+        
+        div[data-testid="metric-container"] {
+            margin-bottom: 0.5rem;
+        }
+        
+        .contribution-title {
+            font-size: 0.75rem;
+        }
+        
+        .contribution-item {
+            font-size: 0.8rem;
+            padding: 0.3rem 0;
+        }
+        
+        .info-card {
+            padding: 1.5rem 1rem;
+        }
+        
+        /* Stack columns on mobile */
+        [data-testid="column"] {
+            min-width: 100% !important;
+        }
+    }
+    
+    /* RESPONSIVE: Tablet adjustments */
+    @media (min-width: 769px) and (max-width: 1024px) {
+        .main-title {
+            font-size: 2.2rem;
+        }
+        
+        .player-name {
+            font-size: 2rem;
+        }
+    }
+    
+    /* RESPONSIVE: Large screen optimizations */
+    @media (min-width: 1920px) {
+        .main {
+            max-width: 1920px;
+            margin: 0 auto;
+        }
+    }
+    
+    /* Context info text - RESPONSIVE */
+    .context-info {
+        font-size: clamp(0.9rem, 2vw, 1.1rem) !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -430,7 +489,7 @@ with tab1:
         with stats_col:
             st.markdown(f'<h1 class="player-name">{selected_batter}</h1>', unsafe_allow_html=True)
             st.markdown(f'''
-            <p style="
+            <p class="context-info" style="
                 color: rgba(255,255,255,0.7);
                 font-size: 1.1rem;
                 font-weight: 500;      
@@ -444,9 +503,6 @@ with tab1:
             st.metric("OVERALL PROTECTION", f"{stats.get('overall', 0):.1f}%")
             st.metric("RUNNING PROTECTION", f"{stats.get('running', 0):.1f}%")
             st.metric("BOUNDARY PROTECTION", f"{stats.get('boundary', 0):.1f}%")
-
-            
-
 
         st.markdown("---")
 
@@ -503,15 +559,15 @@ with tab2:
         Fielders are then placed <strong>greedily</strong> using <strong>Dynamic Programming</strong>, 
         keeping in mind the field restrictions and rules, to maximize the overall protection percentage. 
         Each fielder protects runs in their coverage area.
-        </p> <h3 class="info-subtitle">Special Fielder Categories</h3><div class="special-category">
+        </p><h3 class="info-subtitle">Special Fielder Categories</h3><div class="special-category">
             <strong style="color: #dc2626;">30 Yard Wall</strong> — Your best infielder, placed where most grounded shots are expected.
         </div><div class="special-category">
             <strong style="color: #f97316;">Sprinter</strong> — The best runner, placed where batters tend to hit and run singles/doubles in the outfield.
-        </div> <div class="special-category">
+        </div><div class="special-category">
             <strong style="color: #84cc16;">Catcher</strong> — The best catcher, placed where batters hit the most boundaries.
         </div><div class="special-category">
             <strong style="color: #fbbf24;">Superfielder</strong> — A combination of sprinter and catcher, used if both positions coincide.
-        </div> <h3 class="info-subtitle">Further Reading</h3>
+        </div><h3 class="info-subtitle">Further Reading</h3>
         <p style="color: rgba(255,255,255,0.85); line-height: 1.8; font-size: 1rem;">
         For a detailed explanation of the methodology, read the full article on Substack: 
         <a href="https://arnavj.substack.com/p/the-sacred-nine-spots" target="_blank" 
@@ -521,7 +577,6 @@ with tab2:
         </p>
     </div>
     """, unsafe_allow_html=True)
-
 
 
 
