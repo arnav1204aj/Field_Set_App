@@ -602,7 +602,7 @@ def create_zone_strength_table(dict_360, batter_name, selected_length, bowl_kind
                 'Behind': 0
             }
         
-        # Create figure with red theme
+        # Create figure with transparent background and tight bbox
         fig, ax = plt.subplots(figsize=(6, 4), facecolor='none')
         ax.axis('tight')
         ax.axis('off')
@@ -630,7 +630,7 @@ def create_zone_strength_table(dict_360, batter_name, selected_length, bowl_kind
         
         table.auto_set_font_size(False)
         table.set_fontsize(11)
-        table.scale(1, 2.5)
+        table.scale(1, 2.2)  # Reduced from 2.5
         
         # Style header
         for i in range(2):
@@ -660,12 +660,16 @@ def create_zone_strength_table(dict_360, batter_name, selected_length, bowl_kind
             cell.set_edgecolor('white')
             cell.set_linewidth(1.5)
         
-        plt.tight_layout()
+        # Remove all padding and margins
+        plt.tight_layout(pad=0)
+        plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
+        
         return fig, zones
         
     except Exception as e:
         st.error(f"Error creating zone strength table: {e}")
         return None, None
+
 
 
 def create_shot_profile_chart(shot_per, batter_name, selected_length, bowl_kind):
@@ -969,7 +973,7 @@ with tab1:
             st.markdown('<p class="section-header">Relative Zone Strengths</p>', unsafe_allow_html=True)
             
             # Wrapper with flexbox
-            st.markdown('<div style="display: flex; align-items: center; gap: 2rem;">', unsafe_allow_html=True)
+            st.markdown('<div style="display: flex; align-items: flex-start; gap: 2rem;">', unsafe_allow_html=True)
             
             zone_col, zone_info_col = st.columns([1.6, 1.4])
             
@@ -981,7 +985,10 @@ with tab1:
                     selected_bowl_kind
                 )
                 if zone_fig:
-                    st.pyplot(zone_fig, use_container_width=True)
+                    # Remove top margin/padding
+                    st.markdown('<div style="margin-top: -20px;">', unsafe_allow_html=True)
+                    st.pyplot(zone_fig, use_container_width=True, bbox_inches='tight', pad_inches=0)
+                    st.markdown('</div>', unsafe_allow_html=True)
             
             with zone_info_col:
                 st.markdown("""
@@ -990,7 +997,7 @@ with tab1:
                     padding: 1.5rem;
                     border-radius: 12px;
                     border: 1px solid rgba(220,38,38,0.3);
-                    height: 100%;
+                    min-height: 280px;
                     display: flex;
                     flex-direction: column;
                     justify-content: center;
@@ -1009,11 +1016,11 @@ with tab1:
                         <strong style="color: #fca5a5;">Quality:</strong>
                         <span style="color: rgba(255,255,255,0.85);"> Difficulty of the shot given line and length </span>
                     </div>
-                    
                 </div>
                 """, unsafe_allow_html=True)
             
             st.markdown('</div>', unsafe_allow_html=True)
+
 
         st.markdown("---")
 
