@@ -574,6 +574,190 @@ def plot_sector_ev_heatmap(
     except Exception as e:
         st.error(f"Error creating EV heatmap: {e}")
         return None
+    
+
+# Add these functions after your plot_sector_ev_heatmap function
+
+def create_zone_strength_table(dict_360, batter_name, selected_length, bowl_kind):
+    """
+    Create a styled table showing zone strength percentages
+    """
+    try:
+        data = dict_360[batter_name][selected_length][bowl_kind]
+        
+        total_eff = data['total_eff_runs']
+        
+        if total_eff > 0:
+            zones = {
+                'Straight': (data['st_eff_runs'] / total_eff) * 100,
+                'Leg Side': (data['leg_eff_runs'] / total_eff) * 100,
+                'Off Side': (data['off_eff_runs'] / total_eff) * 100,
+                'Behind': (data['bk_eff_runs'] / total_eff) * 100
+            }
+        else:
+            zones = {
+                'Straight': 0,
+                'Leg Side': 0,
+                'Off Side': 0,
+                'Behind': 0
+            }
+        
+        # Create figure with red theme
+        fig, ax = plt.subplots(figsize=(6, 4), facecolor='none')
+        ax.axis('tight')
+        ax.axis('off')
+        
+        # Prepare table data
+        table_data = [[zone, f"{pct:.1f}%"] for zone, pct in zones.items()]
+        
+        # Create custom colormap for cells (red theme)
+        from matplotlib.colors import LinearSegmentedColormap
+        colors_list = ['#450a0a', '#991b1b', '#dc2626', '#f97316']
+        cmap = LinearSegmentedColormap.from_list('red_theme', colors_list, N=256)
+        
+        # Normalize percentages for coloring
+        values = list(zones.values())
+        vmin, vmax = min(values), max(values)
+        
+        # Create table
+        table = ax.table(
+            cellText=table_data,
+            colLabels=['Region', 'Percentage'],
+            cellLoc='center',
+            loc='center',
+            colWidths=[0.5, 0.5]
+        )
+        
+        table.auto_set_font_size(False)
+        table.set_fontsize(11)
+        table.scale(1, 2.5)
+        
+        # Style header
+        for i in range(2):
+            cell = table[(0, i)]
+            cell.set_facecolor('#991b1b')
+            cell.set_text_props(weight='bold', color='white', fontsize=12)
+            cell.set_edgecolor('white')
+            cell.set_linewidth(2)
+        
+        # Style data cells with gradient coloring
+        for i, (zone, pct) in enumerate(zones.items(), start=1):
+            # Zone name cell
+            cell = table[(i, 0)]
+            cell.set_facecolor('#2d1414')
+            cell.set_text_props(weight='bold', color='white', fontsize=11)
+            cell.set_edgecolor('white')
+            cell.set_linewidth(1.5)
+            
+            # Percentage cell with color gradient
+            cell = table[(i, 1)]
+            if vmax > vmin:
+                norm_val = (pct - vmin) / (vmax - vmin)
+            else:
+                norm_val = 0.5
+            cell.set_facecolor(cmap(norm_val))
+            cell.set_text_props(weight='bold', color='white', fontsize=11)
+            cell.set_edgecolor('white')
+            cell.set_linewidth(1.5)
+        
+        plt.tight_layout()
+        return fig, zones
+        
+    except Exception as e:
+        st.error(f"Error creating zone strength table: {e}")
+        return None, None
+
+
+def create_shot_profile_chart(shot_per, batter_name, selected_length, bowl_kind):
+    """
+    Create a horizontal bar chart showing shot percentages
+    """
+    try:
+        data = shot_per[batter_name][selected_length][bowl_kind]
+        
+        # Extract shot percentages (filter out metadata)
+        shots = {k: v for k, v in data.items() if not k.startswith('_')}
+        
+        if not shots:
+            return None
+        
+        # Sort by percentage descending
+        sorted_shots = sorted(shots.items(), key=lambda x: x[1], reverse=True)
+        
+        # Take top 10 shots
+        top_shots = sorted_shots
+        shot_names = [shot for shot, _ in top_shots]
+        shot_values = [pct for _, pct in top_shots]
+        
+        # Create figure with red theme
+        fig, ax = plt.subplots(figsize=(8, 6), facecolor='#1a0a0a')
+        ax.set_facecolor('#1a0a0a')
+        
+        # Create custom colormap (red gradient)
+        from matplotlib.colors import LinearSegmentedColormap
+        colors_list = ['#450a0a', '#991b1b', '#dc2626', '#f97316', '#fbbf24']
+        cmap = LinearSegmentedColormap.from_list('red_theme', colors_list, N=256)
+        
+        # Normalize values for coloring
+        vmin, vmax = min(shot_values), max(shot_values)
+        
+        # Create horizontal bars with gradient colors
+        bars = ax.barh(
+            range(len(shot_names)),
+            shot_values,
+            color=[cmap((v - vmin) / (vmax - vmin + 1e-9)) for v in shot_values],
+            edgecolor='white',
+            linewidth=1.5,
+            alpha=0.9
+        )
+        
+        # Add percentage labels on bars
+        for i, (bar, value) in enumerate(zip(bars, shot_values)):
+            ax.text(
+                value + 0.5,
+                i,
+                f'{value:.1f}%',
+                va='center',
+                ha='left',
+                color='white',
+                fontweight='bold',
+                fontsize=9
+            )
+        
+        # Styling
+        ax.set_yticks(range(len(shot_names)))
+        ax.set_yticklabels(shot_names, color='white', fontsize=10, fontweight='600')
+        ax.set_xlabel('Percentage (%)', color='white', fontsize=11, fontweight='bold')
+        ax.set_title(
+            f'Shot Profile\n{selected_length} • {bowl_kind}',
+            color='white',
+            fontsize=13,
+            fontweight='bold',
+            pad=15
+        )
+        
+        # Grid and spines
+        ax.grid(axis='x', color='white', alpha=0.2, linestyle='--', linewidth=0.5)
+        ax.set_axisbelow(True)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.spines['left'].set_color('white')
+        ax.spines['bottom'].set_color('white')
+        ax.tick_params(colors='white', labelsize=9)
+        
+        # Set x-axis limits
+        ax.set_xlim(0, max(shot_values) * 1.15)
+        
+        # Invert y-axis so highest percentage is on top
+        ax.invert_yaxis()
+        
+        plt.tight_layout()
+        return fig
+        
+    except Exception as e:
+        st.error(f"Error creating shot profile: {e}")
+        return None
+    
 # ─────────────────────────────
 # Data loading
 # ─────────────────────────────
@@ -584,6 +768,8 @@ def load_field_dict(path):
             return pickle.load(f)
     except FileNotFoundError:
         return {}
+@st.cache_data
+ 
 
 @st.cache_data
 def load_players_data(path):
@@ -605,6 +791,8 @@ def load_ev_dict(path):
 field_dict_t20 = load_field_dict('field_dict_global.bin')
 players_df = load_players_data('players.csv')
 ev_dict = load_ev_dict('EVs.bin')
+dict_360 = load_ev_dict('bat_360.bin')
+shot_per = load_ev_dict('shot_per.bin')
 # Create a mapping of player names to image URLs
 player_images = dict(zip(players_df['fullname'], players_df['image_path']))
 
@@ -669,7 +857,6 @@ with tab1:
                 font-size: 1.1rem;
                 font-weight: 500;      
                 letter-spacing: 0.5px;
-                margin-bottom: 1rem;
             ">
                 {selected_bowl_kind} • {selected_length} • {selected_outfielders} outfielders
             </p>
@@ -677,6 +864,7 @@ with tab1:
             stats = data['protection_stats']
             st.metric("RUNNING PROTECTION", f"{stats.get('running', 0):.1f}%")
             st.metric("BOUNDARY PROTECTION", f"{stats.get('boundary', 0):.1f}%")
+            st.metric("360 SCORE", f"{dict_360[selected_batter][selected_length][selected_bowl_kind]['360_score']:.1f}")
 
         st.markdown("---")
 
@@ -771,6 +959,86 @@ with tab1:
                 """, unsafe_allow_html=True)
             
             st.markdown('</div>', unsafe_allow_html=True)
+
+                # After the Sector Importance section, add:
+        
+        st.markdown("---")
+        
+        # RELATIVE ZONE STRENGTHS
+        if dict_360 and selected_batter in dict_360:
+            st.markdown('<p class="section-header">Relative Zone Strengths</p>', unsafe_allow_html=True)
+            
+            # Wrapper with flexbox
+            st.markdown('<div style="display: flex; align-items: center; gap: 2rem;">', unsafe_allow_html=True)
+            
+            zone_col, zone_info_col = st.columns([1.6, 1.4])
+            
+            with zone_col:
+                zone_fig, zone_data = create_zone_strength_table(
+                    dict_360,
+                    selected_batter,
+                    selected_length,
+                    selected_bowl_kind
+                )
+                if zone_fig:
+                    st.pyplot(zone_fig, use_container_width=True)
+            
+            with zone_info_col:
+                st.markdown("""
+                <div style="
+                    background: linear-gradient(135deg, rgba(153, 27, 27, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%);
+                    padding: 1.5rem;
+                    border-radius: 12px;
+                    border: 1px solid rgba(220,38,38,0.3);
+                    height: 100%;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                ">
+                    <h3 style="color: #fca5a5; font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem;">
+                        Understanding Zone Strengths
+                    </h3>
+                    <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem; margin-bottom: 1rem;">
+                        This table shows how the batter distributes their <strong>effective runs (a measure of quantity × quality)</strong> across four key regions.
+                    </p>
+                    <div style="margin: 0.8rem 0;">
+                        <strong style="color: #fca5a5;">Quantity:</strong>
+                        <span style="color: rgba(255,255,255,0.85);"> Magnitude of Runs </span>
+                    </div>
+                    <div style="margin: 0.8rem 0;">
+                        <strong style="color: #fca5a5;">Quality:</strong>
+                        <span style="color: rgba(255,255,255,0.85);"> Difficulty of the shot given line and length </span>
+                    </div>
+                    
+                </div>
+                """, unsafe_allow_html=True)
+            
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        st.markdown("---")
+
+# SHOT PROFILE
+
+
+        
+        # SHOT PROFILE
+        if shot_per and selected_batter in shot_per:
+            st.markdown('<p class="section-header">Shot Profile</p>', unsafe_allow_html=True)
+            
+            
+            shot_fig = create_shot_profile_chart(
+                shot_per,
+                selected_batter,
+                selected_length,
+                selected_bowl_kind
+            )
+            if shot_fig:
+                st.pyplot(shot_fig, use_container_width=True)
+            
+            
+                # Add spacer for vertical centering
+            
+    
           
 
     except KeyError:
