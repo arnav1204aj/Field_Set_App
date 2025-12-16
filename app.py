@@ -719,7 +719,7 @@ def create_shot_profile_chart(shot_per, batter_name, selected_length, bowl_kind)
         ax.set_yticklabels(shot_names, color='white', fontsize=10, fontweight='600')
         ax.set_xlabel('Percentage (%)', color='white', fontsize=11, fontweight='bold')
         ax.set_title(
-            f'Shot Profile\n{selected_length} • {bowl_kind}',
+            f'Shot Strength Profile\n{selected_length} • {bowl_kind}',
             color='white',
             fontsize=13,
             fontweight='bold',
@@ -782,7 +782,7 @@ field_dict_t20 = load_field_dict('field_dict_global.bin')
 players_df = load_players_data('players.csv')
 ev_dict = load_ev_dict('EVs.bin')
 dict_360 = load_ev_dict('bat_360.bin')
-shot_per = load_ev_dict('shot_per.bin')
+shot_per = load_ev_dict('shot_percent.bin')
 # Create a mapping of player names to image URLs
 player_images = dict(zip(players_df['fullname'], players_df['image_path']))
 
@@ -956,12 +956,12 @@ with tab1:
         
         # RELATIVE ZONE STRENGTHS
         if dict_360 and selected_batter in dict_360:
-                st.markdown('<p class="section-header">Relative Zone Strengths</p>', unsafe_allow_html=True)
+                st.markdown('<p class="section-header">Relative Zone and Shot Strengths</p>', unsafe_allow_html=True)
 
-                zone_col, zone_info_col = st.columns([1.6, 1.4], gap="large")
+                reg_col, shot_col = st.columns([1.5, 1.5], gap="small")
 
                 # -------- LEFT: TABLE --------
-                with zone_col:
+                with reg_col:
                     zone_fig, zone_data = create_zone_strength_table(
                         dict_360,
                         selected_batter,
@@ -970,55 +970,57 @@ with tab1:
                     )
                     if zone_fig:
                         st.pyplot(zone_fig, use_container_width=True)
+                
+                with shot_col:
+                    shot_fig = create_shot_profile_chart(
+                        shot_per,
+                        selected_batter,
+                        selected_length,
+                        selected_bowl_kind
+                    )
+                    if shot_fig:
+                        st.pyplot(shot_fig, use_container_width=True)    
 
                 # -------- RIGHT: EXPLAINER --------
-                with zone_info_col:
-                    st.markdown("""
-                    <div style="
-                        background: linear-gradient(135deg, rgba(153, 27, 27, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%);
-                        padding: 1.5rem;
-                        border-radius: 12px;
-                        border: 1px solid rgba(220,38,38,0.3);
-                        height: 100%;
-                    ">
-                        <h3 style="color: #fca5a5; font-size: 1.2rem; font-weight: 700; margin-top: 0;">
-                            Understanding Zone Strengths
-                        </h3>
-                        <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem;">
-                            This table shows how the batter distributes their
-                            <strong>effective runs (quantity × quality)</strong>
-                            across four key regions.
-                        </p>
-                        <div style="margin-top: 1rem;">
-                            <strong style="color: #fca5a5;">Quantity:</strong>
-                            <span style="color: rgba(255,255,255,0.85);">
-                                Magnitude of Runs
-                            </span>
-                        </div>
-                        <div style="margin-top: 0.6rem;">
-                            <strong style="color: #fca5a5;">Quality:</strong>
-                            <span style="color: rgba(255,255,255,0.85);">
-                                Difficulty of accessing the region given line and length
-                            </span>
-                        </div>
+                
+                st.markdown("""
+                <div style="
+                    background: linear-gradient(135deg, rgba(153, 27, 27, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%);
+                    padding: 1.5rem;
+                    border-radius: 12px;
+                    border: 1px solid rgba(220,38,38,0.3);
+                    height: 100%;
+                ">
+                    <h3 style="color: #fca5a5; font-size: 1.2rem; font-weight: 700; margin-top: 0;">
+                        Understanding Zone and Shot Strengths
+                    </h3>
+                    <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem;">
+                        This table shows how the batter distributes their
+                        <strong>effective runs (quantity × quality)</strong>
+                        across four key regions and different shots. The percentage of effective 
+                        runs scored in different regions (and different shots) is the strength of that region (or shot) for the batter.
+                    </p>
+                    <div style="margin-top: 1rem;">
+                        <strong style="color: #fca5a5;">Quantity:</strong>
+                        <span style="color: rgba(255,255,255,0.85);">
+                            Magnitude of Runs
+                        </span>
                     </div>
-                    """, unsafe_allow_html=True)
+                    <div style="margin-top: 0.6rem;">
+                        <strong style="color: #fca5a5;">Quality:</strong>
+                        <span style="color: rgba(255,255,255,0.85);">
+                            Difficulty of accessing the region (or playing the shot) given line and length
+                        </span>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
 
 
 
-        st.markdown("---")
-        if shot_per and selected_batter in shot_per:
-            st.markdown('<p class="section-header">Shot Profile</p>', unsafe_allow_html=True)
+        
             
             
-            shot_fig = create_shot_profile_chart(
-                shot_per,
-                selected_batter,
-                selected_length,
-                selected_bowl_kind
-            )
-            if shot_fig:
-                st.pyplot(shot_fig, use_container_width=True)
+            
             
             
                 # Add spacer for vertical centering
