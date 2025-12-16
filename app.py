@@ -1007,12 +1007,6 @@ with tab1:
 
 
         st.markdown("---")
-
-# SHOT PROFILE
-
-
-        
-        # SHOT PROFILE
         if shot_per and selected_batter in shot_per:
             st.markdown('<p class="section-header">Shot Profile</p>', unsafe_allow_html=True)
             
