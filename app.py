@@ -579,96 +579,82 @@ def plot_sector_ev_heatmap(
 # Add these functions after your plot_sector_ev_heatmap function
 
 def create_zone_strength_table(dict_360, batter_name, selected_length, bowl_kind):
-    """
-    Create a styled table showing zone strength percentages
-    """
     try:
         data = dict_360[batter_name][selected_length][bowl_kind]
-        
         total_eff = data['total_eff_runs']
-        
-        if total_eff > 0:
-            zones = {
-                'Straight': (data['st_eff_runs'] / total_eff) * 100,
-                'Leg Side': (data['leg_eff_runs'] / total_eff) * 100,
-                'Off Side': (data['off_eff_runs'] / total_eff) * 100,
-                'Behind': (data['bk_eff_runs'] / total_eff) * 100
-            }
-        else:
-            zones = {
-                'Straight': 0,
-                'Leg Side': 0,
-                'Off Side': 0,
-                'Behind': 0
-            }
-        
-        # Create figure with transparent background and tight bbox
-        fig, ax = plt.subplots(figsize=(6, 4), facecolor='none')
-        ax.axis('tight')
+
+        zones = {
+            'Straight': (data['st_eff_runs'] / total_eff * 100) if total_eff else 0,
+            'Leg Side': (data['leg_eff_runs'] / total_eff * 100) if total_eff else 0,
+            'Off Side': (data['off_eff_runs'] / total_eff * 100) if total_eff else 0,
+            'Behind': (data['bk_eff_runs'] / total_eff * 100) if total_eff else 0
+        }
+
+        # ---------- TRANSPARENT FIGURE ----------
+        fig, ax = plt.subplots(figsize=(6, 4))
+        fig.patch.set_alpha(0)
+        ax.set_facecolor('none')
         ax.axis('off')
-        
-        # Prepare table data
-        table_data = [[zone, f"{pct:.1f}%"] for zone, pct in zones.items()]
-        
-        # Create custom colormap for cells (red theme)
-        from matplotlib.colors import LinearSegmentedColormap
-        colors_list = ['#450a0a', '#991b1b', '#dc2626', '#f97316']
-        cmap = LinearSegmentedColormap.from_list('red_theme', colors_list, N=256)
-        
-        # Normalize percentages for coloring
-        values = list(zones.values())
-        vmin, vmax = min(values), max(values)
-        
-        # Create table
+
+        table_data = [[z, f"{v:.1f}%"] for z, v in zones.items()]
+
+        col_widths = [0.5, 0.5]
+
         table = ax.table(
             cellText=table_data,
             colLabels=['Region', 'Percentage'],
             cellLoc='center',
-            loc='center',
-            colWidths=[0.5, 0.5]
+            loc='upper center',
+            colWidths=col_widths
         )
-        
+
         table.auto_set_font_size(False)
         table.set_fontsize(11)
-        table.scale(1, 2.2)  # Reduced from 2.5
+        table.scale(1, 2.1)
         
-        # Style header
+
+        # ---------- FORCE SAME WIDTH FOR ALL CELLS ----------
+        for (row, col), cell in table.get_celld().items():
+            cell.set_width(col_widths[col])
+            cell.set_edgecolor('white')
+
+        # ---------- HEADER STYLING ----------
         for i in range(2):
             cell = table[(0, i)]
             cell.set_facecolor('#991b1b')
-            cell.set_text_props(weight='bold', color='white', fontsize=12)
-            cell.set_edgecolor('white')
+            cell.set_text_props(color='white', weight='bold', fontsize=12)
             cell.set_linewidth(2)
-        
-        # Style data cells with gradient coloring
+
+        values = list(zones.values())
+        vmin, vmax = min(values), max(values)
+
+        from matplotlib.colors import LinearSegmentedColormap
+        cmap = LinearSegmentedColormap.from_list(
+            'red_theme', ['#450a0a', '#991b1b', '#dc2626', '#f97316']
+        )
+
+        # ---------- BODY CELLS ----------
         for i, (zone, pct) in enumerate(zones.items(), start=1):
-            # Zone name cell
+            # Region column
             cell = table[(i, 0)]
             cell.set_facecolor('#2d1414')
-            cell.set_text_props(weight='bold', color='white', fontsize=11)
-            cell.set_edgecolor('white')
-            cell.set_linewidth(1.5)
-            
-            # Percentage cell with color gradient
+            cell.set_text_props(color='white', weight='bold')
+
+            # Percentage column
             cell = table[(i, 1)]
-            if vmax > vmin:
-                norm_val = (pct - vmin) / (vmax - vmin)
-            else:
-                norm_val = 0.5
-            cell.set_facecolor(cmap(norm_val))
-            cell.set_text_props(weight='bold', color='white', fontsize=11)
-            cell.set_edgecolor('white')
-            cell.set_linewidth(1.5)
-        
-        # Remove all padding and margins
-        plt.tight_layout(pad=0)
+            norm = (pct - vmin) / (vmax - vmin) if vmax > vmin else 0.5
+            cell.set_facecolor(cmap(norm))
+            cell.set_text_props(color='white', weight='bold')
+
+        # ---------- NO EXTRA PADDING ----------
         plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
-        
+
         return fig, zones
-        
+
     except Exception as e:
         st.error(f"Error creating zone strength table: {e}")
         return None, None
+
 
 
 
@@ -970,56 +956,54 @@ with tab1:
         
         # RELATIVE ZONE STRENGTHS
         if dict_360 and selected_batter in dict_360:
-            st.markdown('<p class="section-header">Relative Zone Strengths</p>', unsafe_allow_html=True)
-            
-            # Wrapper with flexbox
-            st.markdown('<div style="display: flex; align-items: flex-start; gap: 2rem;">', unsafe_allow_html=True)
-            
-            zone_col, zone_info_col = st.columns([1.6, 1.4])
-            
-            with zone_col:
-                zone_fig, zone_data = create_zone_strength_table(
-                    dict_360,
-                    selected_batter,
-                    selected_length,
-                    selected_bowl_kind
-                )
-                if zone_fig:
-                    # Remove top margin/padding
-                    st.markdown('<div style="margin-top: -20px;">', unsafe_allow_html=True)
-                    st.pyplot(zone_fig, use_container_width=True, bbox_inches='tight', pad_inches=0)
-                    st.markdown('</div>', unsafe_allow_html=True)
-            
-            with zone_info_col:
-                st.markdown("""
-                <div style="
-                    background: linear-gradient(135deg, rgba(153, 27, 27, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%);
-                    padding: 1.5rem;
-                    border-radius: 12px;
-                    border: 1px solid rgba(220,38,38,0.3);
-                    min-height: 280px;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: center;
-                ">
-                    <h3 style="color: #fca5a5; font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem;">
-                        Understanding Zone Strengths
-                    </h3>
-                    <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem; margin-bottom: 1rem;">
-                        This table shows how the batter distributes their <strong>effective runs (a measure of quantity × quality)</strong> across four key regions.
-                    </p>
-                    <div style="margin: 0.8rem 0;">
-                        <strong style="color: #fca5a5;">Quantity:</strong>
-                        <span style="color: rgba(255,255,255,0.85);"> Magnitude of Runs </span>
+                st.markdown('<p class="section-header">Relative Zone Strengths</p>', unsafe_allow_html=True)
+
+                zone_col, zone_info_col = st.columns([1.6, 1.4], gap="large")
+
+                # -------- LEFT: TABLE --------
+                with zone_col:
+                    zone_fig, zone_data = create_zone_strength_table(
+                        dict_360,
+                        selected_batter,
+                        selected_length,
+                        selected_bowl_kind
+                    )
+                    if zone_fig:
+                        st.pyplot(zone_fig, use_container_width=True)
+
+                # -------- RIGHT: EXPLAINER --------
+                with zone_info_col:
+                    st.markdown("""
+                    <div style="
+                        background: linear-gradient(135deg, rgba(153, 27, 27, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%);
+                        padding: 1.5rem;
+                        border-radius: 12px;
+                        border: 1px solid rgba(220,38,38,0.3);
+                        height: 100%;
+                    ">
+                        <h3 style="color: #fca5a5; font-size: 1.2rem; font-weight: 700; margin-top: 0;">
+                            Understanding Zone Strengths
+                        </h3>
+                        <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem;">
+                            This table shows how the batter distributes their
+                            <strong>effective runs (quantity × quality)</strong>
+                            across four key regions.
+                        </p>
+                        <div style="margin-top: 1rem;">
+                            <strong style="color: #fca5a5;">Quantity:</strong>
+                            <span style="color: rgba(255,255,255,0.85);">
+                                Magnitude of Runs
+                            </span>
+                        </div>
+                        <div style="margin-top: 0.6rem;">
+                            <strong style="color: #fca5a5;">Quality:</strong>
+                            <span style="color: rgba(255,255,255,0.85);">
+                                Difficulty of accessing the region given line and length
+                            </span>
+                        </div>
                     </div>
-                    <div style="margin: 0.8rem 0;">
-                        <strong style="color: #fca5a5;">Quality:</strong>
-                        <span style="color: rgba(255,255,255,0.85);"> Difficulty of the shot given line and length </span>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            st.markdown('</div>', unsafe_allow_html=True)
+                    """, unsafe_allow_html=True)
+
 
 
         st.markdown("---")
