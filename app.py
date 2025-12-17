@@ -578,16 +578,16 @@ def plot_sector_ev_heatmap(
 
 # Add these functions after your plot_sector_ev_heatmap function
 
-def create_zone_strength_table(dict_360, batter_name, selected_length, bowl_kind):
+def create_zone_strength_table(dict_360, batter_name, selected_length, bowl_kind, kind):
     try:
         data = dict_360[batter_name][selected_length][bowl_kind]
-        total_eff = data['total_eff_runs']
+        total_eff = data['total_runs']
 
         zones = {
-            'Straight': (data['st_eff_runs'] / total_eff * 100) if total_eff else 0,
-            'Leg Side': (data['leg_eff_runs'] / total_eff * 100) if total_eff else 0,
-            'Off Side': (data['off_eff_runs'] / total_eff * 100) if total_eff else 0,
-            'Behind': (data['bk_eff_runs'] / total_eff * 100) if total_eff else 0
+            'Straight': (data[f'st_{kind}'] / total_eff * 100) if total_eff else 0,
+            'Leg Side': (data[f'leg_{kind}'] / total_eff * 100) if total_eff else 0,
+            'Off Side': (data[f'off_{kind}'] / total_eff * 100) if total_eff else 0,
+            'Behind': (data[f'bk_{kind}'] / total_eff * 100) if total_eff else 0
         }
 
         # ---------- TRANSPARENT FIGURE ----------
@@ -658,50 +658,69 @@ def create_zone_strength_table(dict_360, batter_name, selected_length, bowl_kind
 
 
 
-def create_shot_profile_chart(shot_per, batter_name, selected_length, bowl_kind):
+def create_shot_profile_chart(
+    shot_per,
+    batter_name,
+    selected_length,
+    bowl_kind,
+    value_type="runs"   # "runs" or "avg_runs"
+):
     """
     Create a horizontal bar chart showing shot percentages
+    value_type: "runs" | "avg_runs"
     """
+
     try:
+        # ---------------- FETCH DATA ----------------
         data = shot_per[batter_name][selected_length][bowl_kind]
-        
-        # Extract shot percentages (filter out metadata)
-        shots = {k: v for k, v in data.items() if not k.startswith('_')}
-        
+
+        # Extract requested metric
+        shots = {
+            shot: vals.get(value_type, 0)
+            for shot, vals in data.items()
+            if isinstance(vals, dict)
+        }
+
         if not shots:
             return None
-        
-        # Sort by percentage descending
-        sorted_shots = sorted(shots.items(), key=lambda x: x[1], reverse=True)
-        
-        # Take top 10 shots
-        top_shots = sorted_shots
-        shot_names = [shot for shot, _ in top_shots]
-        shot_values = [pct for _, pct in top_shots]
-        
-        # Create figure with red theme
+
+        # ---------------- SORT ----------------
+        sorted_shots = sorted(
+            shots.items(),
+            key=lambda x: x[1],
+            reverse=True
+        )
+
+        shot_names = [shot for shot, _ in sorted_shots]
+        shot_values = [val for _, val in sorted_shots]
+
+        # ---------------- PLOT ----------------
         fig, ax = plt.subplots(figsize=(8, 6), facecolor='#1a0a0a')
         ax.set_facecolor('#1a0a0a')
-        
-        # Create custom colormap (red gradient)
+
         from matplotlib.colors import LinearSegmentedColormap
         colors_list = ['#450a0a', '#991b1b', '#dc2626', '#f97316', '#fbbf24']
-        cmap = LinearSegmentedColormap.from_list('red_theme', colors_list, N=256)
-        
-        # Normalize values for coloring
+        cmap = LinearSegmentedColormap.from_list(
+            'red_theme',
+            colors_list,
+            N=256
+        )
+
         vmin, vmax = min(shot_values), max(shot_values)
-        
-        # Create horizontal bars with gradient colors
+
         bars = ax.barh(
             range(len(shot_names)),
             shot_values,
-            color=[cmap((v - vmin) / (vmax - vmin + 1e-9)) for v in shot_values],
+            color=[
+                cmap((v - vmin) / (vmax - vmin + 1e-9))
+                for v in shot_values
+            ],
             edgecolor='white',
             linewidth=1.5,
             alpha=0.9
         )
-        
-        # Add percentage labels on bars
+
+        # ---------------- LABELS ----------------
         for i, (bar, value) in enumerate(zip(bars, shot_values)):
             ax.text(
                 value + 0.5,
@@ -713,37 +732,51 @@ def create_shot_profile_chart(shot_per, batter_name, selected_length, bowl_kind)
                 fontweight='bold',
                 fontsize=9
             )
-        
-        # Styling
+
+        # ---------------- STYLING ----------------
         ax.set_yticks(range(len(shot_names)))
-        ax.set_yticklabels(shot_names, color='white', fontsize=10, fontweight='600')
-        ax.set_xlabel('Percentage (%)', color='white', fontsize=11, fontweight='bold')
+        ax.set_yticklabels(
+            shot_names,
+            color='white',
+            fontsize=10,
+            fontweight='600'
+        )
+
+        xlabel = "Run Share (%)" if value_type == "runs" else "Avg Batter Run Share (%)"
+        title_suffix = "Actual Runs" if value_type == "runs" else "Avg Batter Runs"
+
+        ax.set_xlabel(xlabel, color='white', fontsize=11, fontweight='bold')
         ax.set_title(
-            f'Shot Strength Profile\n{selected_length} • {bowl_kind}',
+            f'Shot Strength Profile ({title_suffix})\n'
+            f'{selected_length} • {bowl_kind}',
             color='white',
             fontsize=13,
             fontweight='bold',
             pad=15
         )
-        
-        # Grid and spines
-        ax.grid(axis='x', color='white', alpha=0.2, linestyle='--', linewidth=0.5)
+
+        ax.grid(
+            axis='x',
+            color='white',
+            alpha=0.2,
+            linestyle='--',
+            linewidth=0.5
+        )
         ax.set_axisbelow(True)
+
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         ax.spines['left'].set_color('white')
         ax.spines['bottom'].set_color('white')
+
         ax.tick_params(colors='white', labelsize=9)
-        
-        # Set x-axis limits
+
         ax.set_xlim(0, max(shot_values) * 1.15)
-        
-        # Invert y-axis so highest percentage is on top
         ax.invert_yaxis()
-        
+
         plt.tight_layout()
         return fig
-        
+
     except Exception as e:
         st.error(f"Error creating shot profile: {e}")
         return None
@@ -956,30 +989,61 @@ with tab1:
         
         # RELATIVE ZONE STRENGTHS
         if dict_360 and selected_batter in dict_360:
-                st.markdown('<p class="section-header">Relative Zone and Shot Strengths</p>', unsafe_allow_html=True)
+                st.markdown('<p class="section-header">Relative Zone Strengths</p>', unsafe_allow_html=True)
 
-                reg_col, shot_col = st.columns([1.5, 1.5], gap="small")
+                reg_col, avg_col = st.columns([1.5, 1.5], gap="small")
 
                 # -------- LEFT: TABLE --------
                 with reg_col:
+                    st.markdown(f'<p class="subsection-header">{selected_batter}\'s Run Distribution</p>', unsafe_allow_html=True)
                     zone_fig, zone_data = create_zone_strength_table(
                         dict_360,
                         selected_batter,
                         selected_length,
-                        selected_bowl_kind
+                        selected_bowl_kind,
+                        'runs'
                     )
                     if zone_fig:
                         st.pyplot(zone_fig, use_container_width=True)
-                
-                with shot_col:
-                    shot_fig = create_shot_profile_chart(
-                        shot_per,
+                with avg_col:  
+                    st.markdown('<p class="subsection-header">Average Batter\'s Run Distribution</p>', unsafe_allow_html=True)      
+                    zone_fig, zone_data = create_zone_strength_table(
+                        dict_360,
                         selected_batter,
                         selected_length,
-                        selected_bowl_kind
+                        selected_bowl_kind,
+                        'avg_runs'
                     )
-                    if shot_fig:
-                        st.pyplot(shot_fig, use_container_width=True)    
+                    if zone_fig:
+                        st.pyplot(zone_fig, use_container_width=True)    
+                
+                st.markdown('<p class="section-header">Relative Shot Strengths</p>', unsafe_allow_html=True)
+
+                reg_col, avg_col = st.columns([1.5, 1.5], gap="small")        
+                
+                with reg_col:
+                        st.markdown(f'<p class="subsection-header">{selected_batter}\'s Run Distribution</p>', unsafe_allow_html=True)
+                        shot_fig = create_shot_profile_chart(
+                            shot_per,
+                            selected_batter,
+                            selected_length,
+                            selected_bowl_kind,
+                            value_type="runs"
+                        )
+                        if shot_fig:
+                            st.pyplot(shot_fig, use_container_width=True) 
+
+                with avg_col:
+                        st.markdown('<p class="subsection-header">Average Batter\'s Run Distribution</p>', unsafe_allow_html=True)
+                        shot_fig = create_shot_profile_chart(
+                            shot_per,
+                            selected_batter,
+                            selected_length,
+                            selected_bowl_kind,
+                            value_type="avg_runs"
+                        )
+                        if shot_fig:
+                            st.pyplot(shot_fig, use_container_width=True)           
 
                 # -------- RIGHT: EXPLAINER --------
                 
@@ -995,23 +1059,16 @@ with tab1:
                         Understanding Zone and Shot Strengths
                     </h3>
                     <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem;">
-                        This table shows how the batter distributes their
-                        <strong>effective runs (quantity × quality)</strong>
-                        across four key regions and different shots. The percentage of effective 
-                        runs scored in different regions (and different shots) is the strength of that region (or shot) for the batter.
+                        The table and chart show how the batter distributes their runs across four key regions and different shots.<strong> To understand the batter's true strength 
+                        in a particular region or playing a particular shot, we compare his distributions to an 
+                        average batter's distributions </strong>. Average batter's calculations are done on the same 
+                        line-length distribution the batter has faced in his career. The calculations consider run scoring
+                        difficulty of a region or shot for the given line-length-bathand combination. 
                     </p>
-                    <div style="margin-top: 1rem;">
-                        <strong style="color: #fca5a5;">Quantity:</strong>
-                        <span style="color: rgba(255,255,255,0.85);">
-                            Magnitude of Runs
-                        </span>
-                    </div>
-                    <div style="margin-top: 0.6rem;">
-                        <strong style="color: #fca5a5;">Quality:</strong>
-                        <span style="color: rgba(255,255,255,0.85);">
-                            Difficulty of accessing the region (or playing the shot) given line and length
-                        </span>
-                    </div>
+                            <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem;">
+                        The drives include both lofted and grounded drives.
+                    </p>
+                   
                 </div>
                 """, unsafe_allow_html=True)
 
