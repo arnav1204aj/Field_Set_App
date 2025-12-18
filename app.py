@@ -1063,7 +1063,7 @@ with tab1:
                         in a particular region or playing a particular shot, we compare his distributions to an 
                         average batter's distributions </strong>. Average batter's calculations are done on the same 
                         line-length distribution the batter has faced in his career. The calculations consider run scoring
-                        difficulty of a region or shot for the given line-length-bathand combination. 
+                        difficulty of a region or shot for the given line-length-bathand-pace/spin combination. 
                     </p>
                             <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem;">
                         The drives include both lofted and grounded drives.
