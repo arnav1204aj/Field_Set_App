@@ -816,6 +816,7 @@ players_df = load_players_data('players.csv')
 ev_dict = load_ev_dict('EVs.bin')
 dict_360 = load_ev_dict('bat_360.bin')
 shot_per = load_ev_dict('shot_percent.bin')
+avg_360 = load_ev_dict('bat_360_avg.bin')
 # Create a mapping of player names to image URLs
 player_images = dict(zip(players_df['fullname'], players_df['image_path']))
 
@@ -873,23 +874,61 @@ with tab1:
             st.image(player_img_url, use_container_width=True)
 
         with stats_col:
-            st.markdown(f'<h1 class="player-name">{selected_batter}</h1>', unsafe_allow_html=True)
-            st.markdown(f'''
-            <p class="context-info" style="
-                color: rgba(255,255,255,0.7);
-                font-size: 1.1rem;
-                font-weight: 500;      
-                letter-spacing: 0.5px;
-            ">
-                {selected_bowl_kind} • {selected_length} • {selected_outfielders} outfielders
-            </p>
-            ''', unsafe_allow_html=True)
+            st.markdown(
+                f'<h1 class="player-name">{selected_batter}</h1>',
+                unsafe_allow_html=True
+            )
+
+            st.markdown(
+                f'''
+                <p class="context-info" style="
+                    color: rgba(255,255,255,0.7);
+                    font-size: 1.1rem;
+                    font-weight: 500;      
+                    letter-spacing: 0.5px;
+                ">
+                    {selected_bowl_kind} • {selected_length} • {selected_outfielders} outfielders
+                </p>
+                ''',
+                unsafe_allow_html=True
+            )
+
             stats = data['protection_stats']
-            st.metric("RUNNING PROTECTION", f"{stats.get('running', 0):.1f}%")
-            st.metric("BOUNDARY PROTECTION", f"{stats.get('boundary', 0):.1f}%")
-            st.metric("360 SCORE", f"{dict_360[selected_batter][selected_length][selected_bowl_kind]['360_score']:.1f}")
+
+            # ---------- ROW 1 : PROTECTION ----------
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.metric(
+                    "RUNNING PROTECTION",
+                    f"{stats.get('running', 0):.1f}%"
+                )
+
+            with col2:
+                st.metric(
+                    "BOUNDARY PROTECTION",
+                    f"{stats.get('boundary', 0):.1f}%"
+                )
+
+            # ---------- ROW 2 : 360 SCORES ----------
+            col3, col4 = st.columns(2)
+
+            with col3:
+                st.metric(
+                    f"BATTER 360 SCORE",
+                    f"{dict_360[selected_batter][selected_length][selected_bowl_kind]['360_score']:.1f}"
+                )
+
+            with col4:
+                st.metric(
+                    "AVERAGE 360 SCORE",
+                    f"{avg_360['A'][selected_length][selected_bowl_kind]['360_score']:.1f}"
+                )
 
         st.markdown("---")
+
+            
+        
 
         # FIELD AND CONTRIBUTIONS
         col1, col2 = st.columns([1.6, 1.4])
