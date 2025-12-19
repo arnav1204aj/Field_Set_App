@@ -898,33 +898,46 @@ with tab1:
             # ---------- ROW 1 : PROTECTION ----------
             
             # ---------- ROW 2 : 360 SCORES ----------
-            col3, col4 = st.columns(2)
+            col1, col2 = st.columns(2)
 
-            with col3:
+            with col1:
                 st.metric(
                     f"BATTER 360 SCORE",
                     f"{dict_360[selected_batter][selected_length][selected_bowl_kind]['360_score']:.1f}"
                 )
 
-            with col4:
+            with col2:
                 st.metric(
-                    "AVERAGE 360 SCORE",
+                    "GLOBAL AVG (360)",
                     f"{avg_360['A'][selected_length][selected_bowl_kind]['360_score']:.1f}"
                 )
 
-            col1, col2 = st.columns(2)
+            col3, col4 = st.columns(2)
 
-            with col1:
+            with col3:
                 st.metric(
                     "RUNNING PROTECTION",
                     f"{stats.get('running', 0):.1f}%"
                 )
+            
+            with col4:
+                st.metric(
+                    "GLOBAL AVG (RUN. PROT.)",
+                    f"{field_dict['average batter'][selected_bowl_kind][selected_length][selected_outfielders]['protection_stats']['running']:.1f}%"
+                )
 
-            with col2:
+            col5, col6 = st.columns(2)
+            with col5:
                 st.metric(
                     "BOUNDARY PROTECTION",
                     f"{stats.get('boundary', 0):.1f}%"
                 )
+
+            with col6:
+                st.metric(
+                    "GLOBAL AVG (BD. PROT.)",
+                    f"{field_dict['average batter'][selected_bowl_kind][selected_length][selected_outfielders]['protection_stats']['boundary']:.1f}%"
+                )    
     
 
         st.markdown("---")
