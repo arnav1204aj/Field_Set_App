@@ -896,20 +896,7 @@ with tab1:
             stats = data['protection_stats']
 
             # ---------- ROW 1 : PROTECTION ----------
-            col1, col2 = st.columns(2)
-
-            with col1:
-                st.metric(
-                    "RUNNING PROTECTION",
-                    f"{stats.get('running', 0):.1f}%"
-                )
-
-            with col2:
-                st.metric(
-                    "BOUNDARY PROTECTION",
-                    f"{stats.get('boundary', 0):.1f}%"
-                )
-
+            
             # ---------- ROW 2 : 360 SCORES ----------
             col3, col4 = st.columns(2)
 
@@ -924,6 +911,21 @@ with tab1:
                     "AVERAGE 360 SCORE",
                     f"{avg_360['A'][selected_length][selected_bowl_kind]['360_score']:.1f}"
                 )
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.metric(
+                    "RUNNING PROTECTION",
+                    f"{stats.get('running', 0):.1f}%"
+                )
+
+            with col2:
+                st.metric(
+                    "BOUNDARY PROTECTION",
+                    f"{stats.get('boundary', 0):.1f}%"
+                )
+    
 
         st.markdown("---")
 
