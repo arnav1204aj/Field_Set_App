@@ -895,52 +895,71 @@ with tab1:
 
             stats = data['protection_stats']
 
-            # ---------- ROW 1 : PROTECTION ----------
-            
-            # ---------- ROW 2 : 360 SCORES ----------
+            # ─────────────────────────────────────────────
+            # 📊 ROW 1 : 360 SCORES (Higher = Better)
+            # ─────────────────────────────────────────────
             col1, col2 = st.columns(2)
+
+            batter_360 = dict_360[selected_batter][selected_length][selected_bowl_kind]['360_score']
+            global_360 = avg_360['A'][selected_length][selected_bowl_kind]['360_score']
 
             with col1:
                 st.metric(
-                    f"BATTER 360 SCORE",
-                    f"{dict_360[selected_batter][selected_length][selected_bowl_kind]['360_score']:.1f}"
+                    "BATTER 360 SCORE",
+                    f"{batter_360:.1f}",
+                    delta=f"{batter_360 - global_360:.1f}"
                 )
 
             with col2:
                 st.metric(
                     "GLOBAL AVG (360)",
-                    f"{avg_360['A'][selected_length][selected_bowl_kind]['360_score']:.1f}"
+                    f"{global_360:.1f}"
                 )
 
+            # ─────────────────────────────────────────────
+            # 🏃 ROW 2 : RUNNING PROTECTION (Lower = Better)
+            # ─────────────────────────────────────────────
             col3, col4 = st.columns(2)
+
+            batter_run = stats.get('running', 0)
+            global_run = field_dict['average batter'][selected_bowl_kind][selected_length][selected_outfielders]['protection_stats']['running']
 
             with col3:
                 st.metric(
                     "RUNNING PROTECTION",
-                    f"{stats.get('running', 0):.1f}%"
+                    f"{batter_run:.1f}%",
+                    delta=f"{global_run - batter_run:.1f}%"
                 )
-            
+
             with col4:
                 st.metric(
                     "GLOBAL AVG (RUN. PROT.)",
-                    f"{field_dict['average batter'][selected_bowl_kind][selected_length][selected_outfielders]['protection_stats']['running']:.1f}%"
+                    f"{global_run:.1f}%"
                 )
 
+            # ─────────────────────────────────────────────
+            # 🧱 ROW 3 : BOUNDARY PROTECTION (Lower = Better)
+            # ─────────────────────────────────────────────
             col5, col6 = st.columns(2)
+
+            batter_bd = stats.get('boundary', 0)
+            global_bd = field_dict['average batter'][selected_bowl_kind][selected_length][selected_outfielders]['protection_stats']['boundary']
+
             with col5:
                 st.metric(
                     "BOUNDARY PROTECTION",
-                    f"{stats.get('boundary', 0):.1f}%"
+                    f"{batter_bd:.1f}%",
+                    delta=f"{global_bd - batter_bd:.1f}%"
                 )
 
             with col6:
                 st.metric(
                     "GLOBAL AVG (BD. PROT.)",
-                    f"{field_dict['average batter'][selected_bowl_kind][selected_length][selected_outfielders]['protection_stats']['boundary']:.1f}%"
-                )    
-    
+                    f"{global_bd:.1f}%"
+                )
 
         st.markdown("---")
+
 
             
         
