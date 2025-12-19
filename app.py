@@ -297,11 +297,17 @@ st.markdown("""
 # Function to plot field with labels AND legend
 # ─────────────────────────────
 def plot_field_setting(field_data):
+    """
+    Ultra-modern cricket field visualization with transparent background
+    and sleek design elements
+    """
     LIMIT = 350
     THIRTY_YARD_RADIUS_M = 171.25 * LIMIT / 500
 
-    fig, ax = plt.subplots(figsize=(8, 8), facecolor='white')
-    ax.set_facecolor('#166534')
+    # Create figure with TRANSPARENT background
+    fig, ax = plt.subplots(figsize=(10, 10))
+    fig.patch.set_alpha(0.0)  # Transparent figure background
+    ax.patch.set_alpha(0.0)   # Transparent axes background
 
     inside_info = field_data['infielder_positions']
     outside_info = field_data['outfielder_positions']
@@ -311,39 +317,153 @@ def plot_field_setting(field_data):
     infielder_labels = {}
     outfielder_labels = {}
     
+    # ═══════════════════════════════
+    # FIELD BASE - Gradient green circle
+    # ═══════════════════════════════
+    
+    # Create gradient effect with multiple circles
+    gradient_colors = ['#0d5016', '#0f6018', '#11701a', '#13801c', '#15901e']
+    gradient_radii = [LIMIT + 25, LIMIT + 15, LIMIT + 5, LIMIT - 5, LIMIT - 15]
+    
+    for color, radius in zip(gradient_colors, gradient_radii):
+        circle = plt.Circle(
+            (0, 0), 
+            radius, 
+            color=color, 
+            alpha=0.8,
+            zorder=0
+        )
+        ax.add_artist(circle)
+    
+    # ═══════════════════════════════
+    # FIELD MARKINGS - Modern minimalist
+    # ═══════════════════════════════
+    
+    # 30-yard circle (inner) - Neon style
+    circle_30 = plt.Circle(
+        (0, 0), 
+        THIRTY_YARD_RADIUS_M + 20, 
+        color='#00ff88', 
+        fill=False, 
+        linestyle='--', 
+        linewidth=2.5, 
+        alpha=0.6
+    )
+    ax.add_artist(circle_30)
+    
+    # Boundary circle (outer) - Bold white
+    circle_boundary = plt.Circle(
+        (0, 0), 
+        LIMIT + 20, 
+        color='white', 
+        fill=False, 
+        linewidth=4, 
+        alpha=0.95
+    )
+    ax.add_artist(circle_boundary)
+    
+    # Pitch - Modern style with rounded corners
+    from matplotlib.patches import FancyBboxPatch
+    pitch = FancyBboxPatch(
+        (-15, -60), 
+        30, 
+        120, 
+        boxstyle="round,pad=2",
+        facecolor='#8b7355',
+        edgecolor='white',
+        linewidth=2.5,
+        zorder=2,
+        alpha=0.9
+    )
+    ax.add_patch(pitch)
+    
+    # Pitch center line - Glowing effect
+    ax.plot([0, 0], [-60, 60], color='white', linewidth=2, alpha=0.8, zorder=3)
+    ax.plot([0, 0], [-60, 60], color='#00ff88', linewidth=4, alpha=0.3, zorder=2)
+    
+    # Crease lines
+    ax.plot([-15, 15], [0, 0], color='white', linewidth=2.5, alpha=0.9, zorder=3)
+    ax.plot([-15, 15], [-50, -50], color='white', linewidth=2, alpha=0.7, zorder=3)
+    ax.plot([-15, 15], [50, 50], color='white', linewidth=2, alpha=0.7, zorder=3)
+    
+    # ═══════════════════════════════
+    # INFIELDERS - Modern design
+    # ═══════════════════════════════
     wall_angle = special_fielders.get('30_yard_wall')
+    
     for idx, angle in enumerate(inside_info):
         ang_rad = np.deg2rad(angle)
         is_wall = (angle == wall_angle)
         label = f"I{idx+1}"
         infielder_labels[angle] = label
         
+        x_pos = THIRTY_YARD_RADIUS_M * np.sin(ang_rad)
+        y_pos = THIRTY_YARD_RADIUS_M * np.cos(ang_rad)
+        
+        if is_wall:
+            # 30-Yard Wall - Red hexagon with glow
+            color = '#ff1744'
+            size = 550
+            marker = 'h'  # hexagon
+            edge_width = 3.5
+            glow_color = '#ff1744'
+        else:
+            # Regular infielder - Cyan with modern style
+            color = '#00e5ff'
+            size = 350
+            marker = 'o'
+            edge_width = 3
+            glow_color = '#00e5ff'
+        
+        # Outer glow (3 layers for smooth effect)
+        for glow_size, glow_alpha in [(size * 2.5, 0.1), (size * 2, 0.15), (size * 1.5, 0.2)]:
+            ax.scatter(
+                x_pos, y_pos,
+                c=glow_color,
+                s=glow_size,
+                marker=marker,
+                alpha=glow_alpha,
+                zorder=8
+            )
+        
+        # Main marker with gradient effect
         ax.scatter(
-            THIRTY_YARD_RADIUS_M * np.sin(ang_rad),
-            THIRTY_YARD_RADIUS_M * np.cos(ang_rad),
-            c='#dc2626' if is_wall else '#06b6d4',
-            s=400 if is_wall else 250,
-            marker='s' if is_wall else 'o',
+            x_pos, y_pos,
+            c=color,
+            s=size,
+            marker=marker,
             edgecolors='white',
-            linewidth=2.5 if is_wall else 2,
+            linewidth=edge_width,
             alpha=0.95,
-            zorder=5,
-            label='30-Yard Wall' if is_wall else None
+            zorder=10
         )
         
-        # Add label text
+        # Inner highlight
+        ax.scatter(
+            x_pos, y_pos,
+            c='white',
+            s=size * 0.3,
+            marker='o',
+            alpha=0.4,
+            zorder=11
+        )
+        
+        # Label with modern font style
         ax.text(
-            THIRTY_YARD_RADIUS_M * np.sin(ang_rad),
-            THIRTY_YARD_RADIUS_M * np.cos(ang_rad),
+            x_pos, y_pos,
             label,
             ha='center',
             va='center',
             color='white',
-            fontsize=10,
+            fontsize=13 if is_wall else 11,
             fontweight='bold',
-            zorder=6
+            zorder=12,
+            family='monospace'
         )
 
+    # ═══════════════════════════════
+    # OUTFIELDERS - Modern design
+    # ═══════════════════════════════
     sprinter_angle = special_fielders.get('sprinter')
     catcher_angle = special_fielders.get('catcher')
     superfielder_angle = special_fielders.get('superfielder')
@@ -353,61 +473,235 @@ def plot_field_setting(field_data):
         label = f"O{idx+1}"
         outfielder_labels[angle] = label
         
-        props = {'c': '#d946ef', 'marker': 'o', 'label': None}
+        x_pos = LIMIT * np.sin(ang_rad)
+        y_pos = LIMIT * np.cos(ang_rad)
+        
+        # Determine special fielder types with modern colors
         if angle == superfielder_angle:
-            props = {'c': '#fbbf24', 'marker': 'D', 'label': 'Superfielder'}
+            color = '#ffd600'  # Bright gold
+            marker = 'D'
+            size = 550
+            edge_width = 3.5
+            glow_color = '#ffd600'
+            special = True
         elif angle == sprinter_angle:
-            props = {'c': '#f97316', 'marker': '^', 'label': 'Sprinter'}
+            color = '#ff6d00'  # Vibrant orange
+            marker = '^'
+            size = 550
+            edge_width = 3.5
+            glow_color = '#ff6d00'
+            special = True
         elif angle == catcher_angle:
-            props = {'c': '#84cc16', 'marker': '*', 'label': 'Catcher'}
+            color = '#76ff03'  # Neon lime
+            marker = '*'
+            size = 600
+            edge_width = 3.5
+            glow_color = '#76ff03'
+            special = True
+        else:
+            color = '#e040fb'  # Bright magenta
+            marker = 'o'
+            size = 350
+            edge_width = 3
+            glow_color = '#e040fb'
+            special = False
 
+        # Outer glow (3 layers)
+        for glow_size, glow_alpha in [(size * 2.5, 0.1), (size * 2, 0.15), (size * 1.5, 0.2)]:
+            ax.scatter(
+                x_pos, y_pos,
+                c=glow_color,
+                s=glow_size,
+                marker=marker,
+                alpha=glow_alpha,
+                zorder=8
+            )
+        
+        # Main marker
         ax.scatter(
-            LIMIT * np.sin(ang_rad),
-            LIMIT * np.cos(ang_rad),
-            s=400 if props['label'] else 250,
+            x_pos, y_pos,
+            s=size,
+            c=color,
+            marker=marker,
             edgecolors='white',
-            linewidth=2.5 if props['label'] else 2,
+            linewidth=edge_width,
             alpha=0.95,
-            zorder=5,
-            **props
+            zorder=10
         )
         
-        # Add label text
+        # Inner highlight
+        if marker in ['o', 'D', '^']:
+            ax.scatter(
+                x_pos, y_pos,
+                c='white',
+                s=size * 0.3,
+                marker='o',
+                alpha=0.4,
+                zorder=11
+            )
+        
+        # Label
+        text_color = 'black' if color in ['#ffd600', '#76ff03'] else 'white'
         ax.text(
-            LIMIT * np.sin(ang_rad),
-            LIMIT * np.cos(ang_rad),
+            x_pos, y_pos,
             label,
             ha='center',
             va='center',
-            color='white',
-            fontsize=10,
+            color=text_color,
+            fontsize=13 if special else 11,
             fontweight='bold',
-            zorder=6
+            zorder=12,
+            family='monospace'
         )
 
-    ax.add_artist(plt.Circle((0, 0), THIRTY_YARD_RADIUS_M+20, color='white', fill=False, linestyle='--', linewidth=2.5, alpha=0.6))
-    ax.add_artist(plt.Circle((0, 0), LIMIT+20, color='white', fill=False, linewidth=3, alpha=0.8))
-    ax.add_artist(plt.Rectangle((-10, -50), 20, 100, facecolor='#92400e', zorder=0, alpha=0.9))
-    ax.arrow(0, 40, 0, -60, width=15, head_width=35, head_length=25, fc='white', ec='white', zorder=10, alpha=0.9)
-    ax.text(0, 60, 'BATTER FACING', ha='center', va='top', color='white', fontsize=11, fontweight='bold',
-            bbox=dict(facecolor='#2d1414', alpha=0.9, boxstyle='round,pad=0.5', edgecolor='white', linewidth=1.5))
+    # ═══════════════════════════════
+    # DIRECTION INDICATOR - Modern sleek arrow
+    # ═══════════════════════════════
+    
+    # Glow layers
+    for width, head_w, head_l, alpha in [(30, 55, 40, 0.15), (25, 50, 35, 0.2), (20, 45, 30, 0.25)]:
+        ax.arrow(
+            0, 50, 0, -75,
+            width=width,
+            head_width=head_w,
+            head_length=head_l,
+            fc='#ff1744',
+            ec='none',
+            linewidth=0,
+            zorder=13,
+            alpha=alpha
+        )
+    
+    # Main arrow
+    ax.arrow(
+        0, 50, 0, -75,
+        width=15,
+        head_width=40,
+        head_length=25,
+        fc='#ff1744',
+        ec='white',
+        linewidth=3,
+        zorder=15,
+        alpha=0.95
+    )
+    
+    # Direction label - Modern badge
+    ax.text(
+        0, 70, 
+        'FACING',
+        ha='center',
+        va='center',
+        color='white',
+        fontsize=11,
+        fontweight='bold',
+        bbox=dict(
+            facecolor='#ff1744',
+            alpha=0.95,
+            boxstyle='round,pad=0.7',
+            edgecolor='white',
+            linewidth=2.5
+        ),
+        zorder=16,
+        family='sans-serif'
+    )
 
-    for angle in [0, 90, 180, 270]:
+    # ═══════════════════════════════
+    # ANGLE MARKERS - Minimalist badges
+    # ═══════════════════════════════
+    angles_config = [
+        (0, '#ff1744'),
+        (90, '#ff1744'),
+        (180, '#ff1744'),
+        (270, '#ff1744')
+    ]
+    
+    for angle, badge_color in angles_config:
         angle_rad = np.deg2rad(angle)
-        ax.text((LIMIT + 40) * np.sin(angle_rad), (LIMIT + 40) * np.cos(angle_rad),
-                f'{angle}°', color='white', ha='center', va='center', fontweight='bold', fontsize=10,
-                bbox=dict(facecolor='#2d1414', alpha=0.9, pad=4, edgecolor='white', linewidth=1.5))
-    
-    # Add legend
-    ax.legend(facecolor='#2d1414', edgecolor='white', framealpha=0.95, loc='upper right', fontsize=9, labelcolor='white')
-    
-    ax.set_xlim(-(LIMIT + 50), LIMIT + 50)
-    ax.set_ylim(-(LIMIT + 50), LIMIT + 50)
-    ax.set_aspect('equal')
-    ax.set_xticks([])
-    ax.set_yticks([])
+        x_pos = (LIMIT + 55) * np.sin(angle_rad)
+        y_pos = (LIMIT + 55) * np.cos(angle_rad)
+        
+        # Glow behind badge
+        ax.scatter(
+            x_pos, y_pos,
+            c=badge_color,
+            s=800,
+            marker='o',
+            alpha=0.2,
+            zorder=14
+        )
+        
+        # Badge
+        ax.text(
+            x_pos, y_pos,
+            f'{angle}°',
+            color='white',
+            ha='center',
+            va='center',
+            fontweight='bold',
+            fontsize=10,
+            bbox=dict(
+                facecolor=badge_color,
+                alpha=0.95,
+                pad=6,
+                edgecolor='white',
+                linewidth=2.5,
+                boxstyle='round,pad=0.5'
+            ),
+            zorder=16,
+            family='monospace'
+        )
 
+    # ═══════════════════════════════
+    # LEGEND - Ultra-modern glass-morphic style
+    # ═══════════════════════════════
+    from matplotlib.lines import Line2D
+    
+    legend_elements = [
+        Line2D([0], [0], marker='h', color='w', markerfacecolor='#ff1744', 
+               markersize=13, label='30-Yard Wall', markeredgecolor='white', markeredgewidth=2.5),
+        Line2D([0], [0], marker='o', color='w', markerfacecolor='#00e5ff', 
+               markersize=11, label='Infielder', markeredgecolor='white', markeredgewidth=2),
+        Line2D([0], [0], marker='^', color='w', markerfacecolor='#ff6d00', 
+               markersize=13, label='Sprinter', markeredgecolor='white', markeredgewidth=2.5),
+        Line2D([0], [0], marker='*', color='w', markerfacecolor='#76ff03', 
+               markersize=15, label='Catcher', markeredgecolor='white', markeredgewidth=2.5),
+        Line2D([0], [0], marker='D', color='w', markerfacecolor='#ffd600', 
+               markersize=11, label='Superfielder', markeredgecolor='white', markeredgewidth=2.5),
+        Line2D([0], [0], marker='o', color='w', markerfacecolor='#e040fb', 
+               markersize=11, label='Outfielder', markeredgecolor='white', markeredgewidth=2),
+    ]
+    
+    legend = ax.legend(
+        handles=legend_elements,
+        facecolor='#1a1a1a',
+        edgecolor='white',
+        framealpha=0.9,
+        loc='upper left',
+        fontsize=9,
+        labelcolor='white',
+        title='FIELDERS',
+        title_fontsize=11,
+        frameon=True,
+        shadow=False,
+        borderpad=1.2,
+        labelspacing=1
+    )
+    legend.get_title().set_color('white')
+    legend.get_title().set_weight('bold')
+    legend.get_frame().set_linewidth(2.5)
+
+    # ═══════════════════════════════
+    # FINAL SETTINGS
+    # ═══════════════════════════════
+    ax.set_xlim(-(LIMIT + 80), LIMIT + 80)
+    ax.set_ylim(-(LIMIT + 80), LIMIT + 80)
+    ax.set_aspect('equal')
+    ax.axis('off')
+    
+    plt.tight_layout(pad=0)
+    
     return fig, infielder_labels, outfielder_labels
+
 
 def plot_sector_ev_heatmap(
     ev_dict, 
@@ -418,7 +712,7 @@ def plot_sector_ev_heatmap(
     THIRTY_YARD_RADIUS_M=171.25 * 350 / 500
 ):
     """
-    Combined polar heatmap with red theme:
+    Combined polar heatmap with modern design and transparent background:
     - Inner sector (≤30-yard): running EV (ev_run)
     - Outer sector (>30-yard): boundary EV (ev_bd)
     Both use a common color scale for consistent intensity interpretation.
@@ -435,22 +729,39 @@ def plot_sector_ev_heatmap(
         all_vals = np.concatenate([ev_bd, ev_run])
         vmin, vmax = np.nanmin(all_vals), np.nanmax(all_vals)
 
-        # Create figure with dark background
-        fig = plt.figure(figsize=(8, 8), facecolor='#1a0a0a')
-        ax = fig.add_subplot(111, polar=True, facecolor='white')
+        # Create figure with TRANSPARENT background
+        fig = plt.figure(figsize=(9, 9))
+        fig.patch.set_alpha(0.0)  # Transparent figure
+        ax = fig.add_subplot(111, polar=True)
+        ax.patch.set_alpha(0.0)  # Transparent axes
         
         ax.set_theta_zero_location('N')
         ax.set_theta_direction(-1)
 
-        # Custom red colormap (dark red to bright red/orange)
+        # Modern red/orange gradient colormap
         from matplotlib.colors import LinearSegmentedColormap
-        colors_list = ['#450a0a', '#991b1b', '#dc2626', '#f97316', '#fbbf24']
-        cmap = LinearSegmentedColormap.from_list('red_theme', colors_list, N=256)
+        colors_list = ['#1a0000', '#450a0a', '#991b1b', '#dc2626', '#f97316', '#fbbf24', '#fde047']
+        cmap = LinearSegmentedColormap.from_list('modern_red', colors_list, N=256)
 
-        # Inner ring (Running EV)
+        # Inner ring (Running EV) with glow effect
         for theta, ev in zip(theta_centers, ev_run):
             if not np.isnan(ev):
                 color = cmap((ev - vmin) / (vmax - vmin + 1e-9))
+                
+                # Glow layer
+                ax.bar(
+                    np.deg2rad(theta),
+                    THIRTY_YARD_RADIUS_M,
+                    width=np.deg2rad(band_width * 1.2),
+                    bottom=0,
+                    color=color,
+                    edgecolor='none',
+                    linewidth=0,
+                    alpha=0.2,
+                    zorder=1
+                )
+                
+                # Main bar
                 ax.bar(
                     np.deg2rad(theta),
                     THIRTY_YARD_RADIUS_M,
@@ -458,14 +769,30 @@ def plot_sector_ev_heatmap(
                     bottom=0,
                     color=color,
                     edgecolor='white',
-                    linewidth=0.5,
-                    alpha=0.9
+                    linewidth=1,
+                    alpha=0.95,
+                    zorder=2
                 )
 
-        # Outer ring (Boundary EV)
+        # Outer ring (Boundary EV) with glow effect
         for theta, ev in zip(theta_centers, ev_bd):
             if not np.isnan(ev):
                 color = cmap((ev - vmin) / (vmax - vmin + 1e-9))
+                
+                # Glow layer
+                ax.bar(
+                    np.deg2rad(theta),
+                    LIMIT - THIRTY_YARD_RADIUS_M,
+                    width=np.deg2rad(band_width * 1.2),
+                    bottom=THIRTY_YARD_RADIUS_M,
+                    color=color,
+                    edgecolor='none',
+                    linewidth=0,
+                    alpha=0.2,
+                    zorder=1
+                )
+                
+                # Main bar
                 ax.bar(
                     np.deg2rad(theta),
                     LIMIT - THIRTY_YARD_RADIUS_M,
@@ -473,80 +800,89 @@ def plot_sector_ev_heatmap(
                     bottom=THIRTY_YARD_RADIUS_M,
                     color=color,
                     edgecolor='white',
-                    linewidth=0.5,
-                    alpha=0.9
+                    linewidth=1,
+                    alpha=0.95,
+                    zorder=2
                 )
 
-        # Draw visual guides
+        # Draw visual guides with modern styling
         inner_circle = plt.Circle(
             (0, 0), THIRTY_YARD_RADIUS_M, 
             color='white', fill=False, 
-            linestyle='--', linewidth=2.5, 
+            linestyle='--', linewidth=3, 
             transform=ax.transData._b,
-            alpha=0.6
+            alpha=0.7,
+            zorder=3
         )
         boundary_circle = plt.Circle(
             (0, 0), LIMIT, 
             color='white', fill=False, 
-            linewidth=3, 
+            linewidth=3.5, 
             transform=ax.transData._b,
-            alpha=0.8
+            alpha=0.9,
+            zorder=3
         )
         ax.add_artist(inner_circle)
         ax.add_artist(boundary_circle)
 
-        # Title styling
+        # Title styling - Modern
         ax.set_title(
             f"Sector Importance\n{selected_length} • {bowl_kind}",
-            fontsize=14, 
+            fontsize=15, 
             weight='bold', 
             color='white',
-            pad=20
+            pad=25,
+            family='sans-serif'
         )
         
-        # Axis styling
+        # Axis styling - Modern badges
         ax.set_xticks(np.deg2rad(np.arange(0, 360, 30)))
         ax.set_xticklabels(
             [f'{int(t)}°' for t in np.arange(0, 360, 30)], 
-            fontsize=9,
+            fontsize=10,
             color='white',
-            weight='bold'
+            weight='bold',
+            family='monospace'
         )
-        ax.grid(True, color='white', alpha=0.2, linewidth=0.5)
+        ax.grid(True, color='white', alpha=0.15, linewidth=1, linestyle='-')
         ax.set_yticklabels([])
         ax.spines['polar'].set_color('white')
-        ax.spines['polar'].set_linewidth(2)
+        ax.spines['polar'].set_linewidth(3)
 
-        # Add labels for inner and outer rings
+        # Modern labels with glassmorphic effect
         ax.text(
             0, THIRTY_YARD_RADIUS_M / 2, 
             'Running', 
             ha='center', va='center',
-            fontsize=9, weight='bold', color='white',
+            fontsize=10, weight='bold', color='white',
             bbox=dict(
-                facecolor='#2d1414', 
-                alpha=0.8, 
-                boxstyle='round,pad=0.5',
+                facecolor='#1a1a1a', 
+                alpha=0.9, 
+                boxstyle='round,pad=0.6',
                 edgecolor='white',
-                linewidth=1
-            )
+                linewidth=2
+            ),
+            zorder=10,
+            family='sans-serif'
         )
         
         ax.text(
             np.pi, (THIRTY_YARD_RADIUS_M + LIMIT) / 2, 
             'Boundary', 
             ha='center', va='center',
-            fontsize=9, weight='bold', color='white',
+            fontsize=10, weight='bold', color='white',
             bbox=dict(
-                facecolor='#2d1414', 
-                alpha=0.8, 
-                boxstyle='round,pad=0.5',
+                facecolor='#1a1a1a', 
+                alpha=0.9, 
+                boxstyle='round,pad=0.6',
                 edgecolor='white',
-                linewidth=1
-            )
+                linewidth=2
+            ),
+            zorder=10,
+            family='sans-serif'
         )
 
-        # Colorbar
+        # Modern colorbar
         sm = plt.cm.ScalarMappable(cmap=cmap)
         sm.set_array(all_vals)
         sm.set_clim(vmin, vmax)
@@ -554,19 +890,22 @@ def plot_sector_ev_heatmap(
         cbar = plt.colorbar(
             sm, 
             ax=ax, 
-            pad=0.1, 
+            pad=0.12, 
             fraction=0.046,
-            aspect=20
+            aspect=25
         )
         cbar.set_label(
             'Importance', 
-            fontsize=10, 
+            fontsize=11, 
             color='white',
-            weight='bold'
+            weight='bold',
+            family='sans-serif'
         )
-        cbar.ax.tick_params(colors='white', labelsize=9)
+        cbar.ax.tick_params(colors='white', labelsize=10, width=2)
         cbar.outline.set_edgecolor('white')
-        cbar.outline.set_linewidth(1.5)
+        cbar.outline.set_linewidth(2)
+        cbar.ax.set_facecolor('#1a1a1a')
+        cbar.ax.patch.set_alpha(0.9)
 
         plt.tight_layout()
         return fig
@@ -574,11 +913,12 @@ def plot_sector_ev_heatmap(
     except Exception as e:
         st.error(f"Error creating EV heatmap: {e}")
         return None
-    
 
-# Add these functions after your plot_sector_ev_heatmap function
 
 def create_zone_strength_table(dict_360, batter_name, selected_length, bowl_kind, kind):
+    """
+    Modern transparent table with glassmorphic design
+    """
     try:
         data = dict_360[batter_name][selected_length][bowl_kind]
         total_eff = data['total_runs']
@@ -590,14 +930,13 @@ def create_zone_strength_table(dict_360, batter_name, selected_length, bowl_kind
             'Behind': (data[f'bk_{kind}'] / total_eff * 100) if total_eff else 0
         }
 
-        # ---------- TRANSPARENT FIGURE ----------
-        fig, ax = plt.subplots(figsize=(6, 4))
-        fig.patch.set_alpha(0)
+        # TRANSPARENT FIGURE
+        fig, ax = plt.subplots(figsize=(6.5, 4.5))
+        fig.patch.set_alpha(0.0)
         ax.set_facecolor('none')
         ax.axis('off')
 
         table_data = [[z, f"{v:.1f}%"] for z, v in zones.items()]
-
         col_widths = [0.5, 0.5]
 
         table = ax.table(
@@ -609,53 +948,68 @@ def create_zone_strength_table(dict_360, batter_name, selected_length, bowl_kind
         )
 
         table.auto_set_font_size(False)
-        table.set_fontsize(11)
-        table.scale(1, 2.1)
-        
+        table.set_fontsize(12)
+        table.scale(1, 2.3)
 
-        # ---------- FORCE SAME WIDTH FOR ALL CELLS ----------
-        for (row, col), cell in table.get_celld().items():
-            cell.set_width(col_widths[col])
-            cell.set_edgecolor('white')
-
-        # ---------- HEADER STYLING ----------
-        for i in range(2):
-            cell = table[(0, i)]
-            cell.set_facecolor('#991b1b')
-            cell.set_text_props(color='white', weight='bold', fontsize=12)
-            cell.set_linewidth(2)
+        # Modern gradient colormap
+        from matplotlib.colors import LinearSegmentedColormap
+        cmap = LinearSegmentedColormap.from_list(
+            'modern_red', 
+            ['#1a0000', '#450a0a', '#991b1b', '#dc2626', '#f97316', '#fbbf24']
+        )
 
         values = list(zones.values())
         vmin, vmax = min(values), max(values)
 
-        from matplotlib.colors import LinearSegmentedColormap
-        cmap = LinearSegmentedColormap.from_list(
-            'red_theme', ['#450a0a', '#991b1b', '#dc2626', '#f97316']
-        )
+        # Apply styling to all cells
+        for (row, col), cell in table.get_celld().items():
+            cell.set_width(col_widths[col])
+            cell.set_edgecolor('white')
+            cell.set_linewidth(2)
 
-        # ---------- BODY CELLS ----------
+        # HEADER STYLING - Modern gradient
+        for i in range(2):
+            cell = table[(0, i)]
+            cell.set_facecolor('black')
+            cell.set_text_props(
+                color='white', 
+                weight='bold', 
+                fontsize=13,
+                family='sans-serif'
+            )
+            cell.set_linewidth(2.5)
+
+        # BODY CELLS - Glassmorphic with glow
         for i, (zone, pct) in enumerate(zones.items(), start=1):
             # Region column
             cell = table[(i, 0)]
-            cell.set_facecolor('#2d1414')
-            cell.set_text_props(color='white', weight='bold')
+            cell.set_facecolor('red')
+            cell.set_alpha(0.9)
+            cell.set_text_props(
+                color='white', 
+                weight='bold',
+                fontsize=11,
+                family='sans-serif'
+            )
 
-            # Percentage column
+            # Percentage column - gradient based on value
             cell = table[(i, 1)]
             norm = (pct - vmin) / (vmax - vmin) if vmax > vmin else 0.5
             cell.set_facecolor(cmap(norm))
-            cell.set_text_props(color='white', weight='bold')
+            cell.set_alpha(0.95)
+            cell.set_text_props(
+                color='white', 
+                weight='bold',
+                fontsize=12,
+                family='monospace'
+            )
 
-        # ---------- NO EXTRA PADDING ----------
         plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
-
         return fig, zones
 
     except Exception as e:
         st.error(f"Error creating zone strength table: {e}")
         return None, None
-
-
 
 
 def create_shot_profile_chart(
@@ -666,15 +1020,12 @@ def create_shot_profile_chart(
     value_type="runs"   # "runs" or "avg_runs"
 ):
     """
-    Create a horizontal bar chart showing shot percentages
-    value_type: "runs" | "avg_runs"
+    Modern horizontal bar chart with transparent background and glow effects
     """
-
     try:
-        # ---------------- FETCH DATA ----------------
+        # FETCH DATA
         data = shot_per[batter_name][selected_length][bowl_kind]
 
-        # Extract requested metric
         shots = {
             shot: vals.get(value_type, 0)
             for shot, vals in data.items()
@@ -684,7 +1035,7 @@ def create_shot_profile_chart(
         if not shots:
             return None
 
-        # ---------------- SORT ----------------
+        # SORT
         sorted_shots = sorted(
             shots.items(),
             key=lambda x: x[1],
@@ -694,84 +1045,120 @@ def create_shot_profile_chart(
         shot_names = [shot for shot, _ in sorted_shots]
         shot_values = [val for _, val in sorted_shots]
 
-        # ---------------- PLOT ----------------
-        fig, ax = plt.subplots(figsize=(8, 6), facecolor='#1a0a0a')
-        ax.set_facecolor('#1a0a0a')
+        # TRANSPARENT FIGURE
+        fig, ax = plt.subplots(figsize=(9, 7))
+        fig.patch.set_alpha(0.0)
+        ax.set_facecolor('none')
 
+        # Modern gradient colormap
         from matplotlib.colors import LinearSegmentedColormap
-        colors_list = ['#450a0a', '#991b1b', '#dc2626', '#f97316', '#fbbf24']
-        cmap = LinearSegmentedColormap.from_list(
-            'red_theme',
-            colors_list,
-            N=256
-        )
+        colors_list = ['#1a0000', '#450a0a', '#991b1b', '#dc2626', '#f97316', '#fbbf24', '#fde047']
+        cmap = LinearSegmentedColormap.from_list('modern_red', colors_list, N=256)
 
         vmin, vmax = min(shot_values), max(shot_values)
 
-        bars = ax.barh(
-            range(len(shot_names)),
-            shot_values,
-            color=[
-                cmap((v - vmin) / (vmax - vmin + 1e-9))
-                for v in shot_values
-            ],
-            edgecolor='white',
-            linewidth=1.5,
-            alpha=0.9
-        )
-
-        # ---------------- LABELS ----------------
-        for i, (bar, value) in enumerate(zip(bars, shot_values)):
+        # Create bars with glow effect
+        y_positions = np.arange(len(shot_names))
+        
+        for i, (y, value) in enumerate(zip(y_positions, shot_values)):
+            color = cmap((value - vmin) / (vmax - vmin + 1e-9))
+            
+            # Glow effect (3 layers)
+            for glow_width, glow_alpha in [(0.8, 0.15), (0.6, 0.2), (0.4, 0.25)]:
+                ax.barh(
+                    y,
+                    value,
+                    height=glow_width,
+                    color=color,
+                    edgecolor='none',
+                    alpha=glow_alpha,
+                    zorder=1
+                )
+            
+            # Main bar
+            ax.barh(
+                y,
+                value,
+                height=0.7,
+                color=color,
+                edgecolor='white',
+                linewidth=2,
+                alpha=0.95,
+                zorder=2
+            )
+            
+            # Value label with badge
             ax.text(
-                value + 0.5,
-                i,
+                value + (vmax * 0.02),
+                y,
                 f'{value:.1f}%',
                 va='center',
                 ha='left',
                 color='white',
                 fontweight='bold',
-                fontsize=9
+                fontsize=10,
+                bbox=dict(
+                    facecolor='#1a1a1a',
+                    alpha=0.9,
+                    edgecolor=color,
+                    linewidth=2,
+                    boxstyle='round,pad=0.4'
+                ),
+                family='monospace',
+                zorder=3
             )
 
-        # ---------------- STYLING ----------------
-        ax.set_yticks(range(len(shot_names)))
+        # STYLING
+        ax.set_yticks(y_positions)
         ax.set_yticklabels(
             shot_names,
             color='white',
-            fontsize=10,
-            fontweight='600'
+            fontsize=11,
+            fontweight='bold',
+            family='sans-serif'
         )
 
         xlabel = "Run Share (%)" if value_type == "runs" else "Avg Batter Run Share (%)"
         title_suffix = "Actual Runs" if value_type == "runs" else "Avg Batter Runs"
 
-        ax.set_xlabel(xlabel, color='white', fontsize=11, fontweight='bold')
+        ax.set_xlabel(
+            xlabel, 
+            color='white', 
+            fontsize=12, 
+            fontweight='bold',
+            family='sans-serif'
+        )
         ax.set_title(
             f'Shot Strength Profile ({title_suffix})\n'
             f'{selected_length} • {bowl_kind}',
             color='white',
-            fontsize=13,
+            fontsize=14,
             fontweight='bold',
-            pad=15
+            pad=20,
+            family='sans-serif'
         )
 
+        # Modern grid
         ax.grid(
             axis='x',
             color='white',
-            alpha=0.2,
-            linestyle='--',
-            linewidth=0.5
+            alpha=0.15,
+            linestyle='-',
+            linewidth=1
         )
         ax.set_axisbelow(True)
 
+        # Spine styling
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         ax.spines['left'].set_color('white')
+        ax.spines['left'].set_linewidth(2)
         ax.spines['bottom'].set_color('white')
+        ax.spines['bottom'].set_linewidth(2)
 
-        ax.tick_params(colors='white', labelsize=9)
+        ax.tick_params(colors='white', labelsize=10, width=2, length=6)
 
-        ax.set_xlim(0, max(shot_values) * 1.15)
+        ax.set_xlim(0, max(shot_values) * 1.2)
         ax.invert_yaxis()
 
         plt.tight_layout()
@@ -780,6 +1167,7 @@ def create_shot_profile_chart(
     except Exception as e:
         st.error(f"Error creating shot profile: {e}")
         return None
+
     
 # ─────────────────────────────
 # Data loading
