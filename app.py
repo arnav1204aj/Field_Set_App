@@ -324,8 +324,8 @@ def plot_field_setting(field_data):
     # ═══════════════════════════════
     
     # Create gradient effect with multiple circles
-    gradient_colors = ['#0d5016', '#0f6018', '#11701a', '#13801c', '#15901e']
-    gradient_radii = [LIMIT + 25, LIMIT + 15, LIMIT + 5, LIMIT - 5, LIMIT - 15]
+    gradient_colors = ['#15901e']
+    gradient_radii = [LIMIT + 25]
     
     for color, radius in zip(gradient_colors, gradient_radii):
         circle = plt.Circle(
@@ -356,7 +356,7 @@ def plot_field_setting(field_data):
     # Boundary circle (outer) - Bold white
     circle_boundary = plt.Circle(
         (0, 0), 
-        LIMIT + 20, 
+        LIMIT + 25, 
         color='white', 
         fill=False, 
         linewidth=4, 
