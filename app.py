@@ -706,7 +706,7 @@ def plot_field_setting(field_data):
 def plot_sector_ev_heatmap(
     ev_dict, 
     batter_name, 
-    selected_length, 
+    selected_lengths, 
     bowl_kind,
     LIMIT=350, 
     THIRTY_YARD_RADIUS_M=171.25 * 350 / 500
@@ -718,12 +718,60 @@ def plot_sector_ev_heatmap(
     Both use a common color scale for consistent intensity interpretation.
     """
     try:
-        # Extract data
-        plot_theta_df = ev_dict[batter_name][selected_length][bowl_kind].copy()
-        theta_centers = plot_theta_df['theta_center_deg'].values % 360
-        ev_bd = plot_theta_df['ev_bd'].values
-        ev_run = plot_theta_df['ev_run'].values
+        # Normalize selected_lengths to a list
+        if isinstance(selected_lengths, (str, tuple)):
+            sel_lens = [selected_lengths] if isinstance(selected_lengths, str) else list(selected_lengths)
+        else:
+            sel_lens = list(selected_lengths)
+        n_lens = len(sel_lens)
         band_width = 15
+
+        # Collect all theta centers across selected lengths
+        all_theta = set()
+        per_len_dfs = {}
+        for ln in sel_lens:
+            try:
+                df = ev_dict[batter_name].get(ln, {}).get(bowl_kind)
+                if df is None:
+                    # missing length/bowl kind -> will be treated as zeros
+                    per_len_dfs[ln] = None
+                else:
+                    per_len_dfs[ln] = df.copy()
+                    all_theta.update(df['theta_center_deg'].values % 360)
+            except Exception:
+                per_len_dfs[ln] = None
+
+        if len(all_theta) == 0:
+            st.warning('No sector EV data available for the selected lengths.')
+            return None
+
+        all_theta = sorted(all_theta)
+
+        # Build aggregated arrays (average across lengths; missing treated as zero)
+        agg_ev_run = []
+        agg_ev_bd = []
+        theta_centers = np.array(all_theta)
+
+        for theta in theta_centers:
+            run_vals = []
+            bd_vals = []
+            for ln in sel_lens:
+                df = per_len_dfs.get(ln)
+                if df is None:
+                    run_vals.append(0.0)
+                    bd_vals.append(0.0)
+                else:
+                    row = df.loc[df['theta_center_deg'] % 360 == theta]
+                    if row.empty:
+                        run_vals.append(0.0)
+                        bd_vals.append(0.0)
+                    else:
+                        run_vals.append(float(row['ev_run'].values[0]))
+                        bd_vals.append(float(row['ev_bd'].values[0]))
+            agg_ev_run.append(sum(run_vals) / n_lens)
+            agg_ev_bd.append(sum(bd_vals) / n_lens)
+        ev_run = np.array(agg_ev_run)
+        ev_bd = np.array(agg_ev_bd)
 
         # Common normalization across both datasets
         all_vals = np.concatenate([ev_bd, ev_run])
@@ -827,7 +875,7 @@ def plot_sector_ev_heatmap(
 
         # Title styling - Modern
         ax.set_title(
-            f"Sector Importance\n{selected_length} • {bowl_kind}",
+            f"Sector Importance\n{', '.join(map(str, selected_lengths))} • {bowl_kind}",
             fontsize=15, 
             weight='bold', 
             color='white',
@@ -915,19 +963,53 @@ def plot_sector_ev_heatmap(
         return None
 
 
-def create_zone_strength_table(dict_360, batter_name, selected_length, bowl_kind, kind):
+def create_zone_strength_table(dict_360, batter_name, selected_lengths, bowl_kind, kind):
     """
     Modern transparent table with glassmorphic design
     """
     try:
-        data = dict_360[batter_name][selected_length][bowl_kind]
-        total_eff = data['total_runs']
+        # Normalize selected_lengths to list
+        if isinstance(selected_lengths, (str, tuple)):
+            sel_lens = [selected_lengths] if isinstance(selected_lengths, str) else list(selected_lengths)
+        else:
+            sel_lens = list(selected_lengths)
+
+        # Aggregate data across lengths by averaging (missing treated as zeros)
+        # Keys expected: total_runs, st_runs / st_avg_runs, leg_..., off_..., bk_...
+        keys_union = set()
+        per_len_data = {}
+        for ln in sel_lens:
+            try:
+                per = dict_360[batter_name].get(ln, {}).get(bowl_kind)
+                per_len_data[ln] = per
+                if per:
+                    keys_union.update(per.keys())
+            except Exception:
+                per_len_data[ln] = None
+
+        if not keys_union:
+            st.warning('No 360 data available for selected lengths.')
+            return None, None
+
+        # Build averaged data dict
+        data = {}
+        for key in keys_union:
+            vals = []
+            for ln in sel_lens:
+                per = per_len_data.get(ln)
+                if not per or key not in per:
+                    vals.append(0.0)
+                else:
+                    vals.append(per[key])
+            # average
+            data[key] = sum(vals) / len(sel_lens)
+        total_eff = data.get('total_runs', 0)
 
         zones = {
-            'Straight': (data[f'st_{kind}'] / total_eff * 100) if total_eff else 0,
-            'Leg Side': (data[f'leg_{kind}'] / total_eff * 100) if total_eff else 0,
-            'Off Side': (data[f'off_{kind}'] / total_eff * 100) if total_eff else 0,
-            'Behind': (data[f'bk_{kind}'] / total_eff * 100) if total_eff else 0
+            'Straight': (data.get(f'st_{kind}', 0) / total_eff * 100) if total_eff else 0,
+            'Leg Side': (data.get(f'leg_{kind}', 0) / total_eff * 100) if total_eff else 0,
+            'Off Side': (data.get(f'off_{kind}', 0) / total_eff * 100) if total_eff else 0,
+            'Behind': (data.get(f'bk_{kind}', 0) / total_eff * 100) if total_eff else 0
         }
 
         # TRANSPARENT FIGURE
@@ -1015,7 +1097,7 @@ def create_zone_strength_table(dict_360, batter_name, selected_length, bowl_kind
 def create_shot_profile_chart(
     shot_per,
     batter_name,
-    selected_length,
+    selected_lengths,
     bowl_kind,
     value_type="runs"   # "runs" or "avg_runs"
 ):
@@ -1023,14 +1105,28 @@ def create_shot_profile_chart(
     Modern horizontal bar chart with transparent background and glow effects
     """
     try:
-        # FETCH DATA
-        data = shot_per[batter_name][selected_length][bowl_kind]
+        # Normalize selected lengths
+        if isinstance(selected_lengths, (str, tuple)):
+            sel_lens = [selected_lengths] if isinstance(selected_lengths, str) else list(selected_lengths)
+        else:
+            sel_lens = list(selected_lengths)
 
-        shots = {
-            shot: vals.get(value_type, 0)
-            for shot, vals in data.items()
-            if isinstance(vals, dict)
-        }
+        # Aggregate shots across lengths (average, missing treated as 0)
+        shots_set = set()
+        per_len_shots = {}
+        for ln in sel_lens:
+            per = shot_per.get(batter_name, {}).get(ln, {}).get(bowl_kind, {})
+            per_len_shots[ln] = per
+            shots_set.update([s for s, v in (per or {}).items() if isinstance(v, dict)])
+
+        shots = {}
+        for shot in shots_set:
+            vals = []
+            for ln in sel_lens:
+                per = per_len_shots.get(ln) or {}
+                v = per.get(shot, {}).get(value_type, 0)
+                vals.append(v)
+            shots[shot] = sum(vals) / len(sel_lens)
 
         if not shots:
             return None
@@ -1130,7 +1226,7 @@ def create_shot_profile_chart(
         )
         ax.set_title(
             f'Shot Strength Profile ({title_suffix})\n'
-            f'{selected_length} • {bowl_kind}',
+            f"{', '.join(map(str, selected_lengths))} • {bowl_kind}",
             color='white',
             fontsize=14,
             fontweight='bold',
@@ -1242,30 +1338,100 @@ with tab1:
         selected_bowl_kind = st.selectbox("Select Bowling Type", bowl_kind_list, label_visibility="collapsed", key="bowl")
 
         length_list = list(field_dict[selected_batter][selected_bowl_kind].keys())
-        st.markdown('<p style="color: white; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem;">Select Length</p>', unsafe_allow_html=True)
-        selected_length = st.selectbox("Select Length", length_list, label_visibility="collapsed", key="length")
+        st.markdown('<p style="color: white; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem;">Select Length(s)</p>', unsafe_allow_html=True)
 
-        outfielder_list = list(field_dict[selected_batter][selected_bowl_kind][selected_length].keys())
+        LENGTH_OPTIONS = ['FULL', 'SHORT', 'GOOD_LENGTH', 'SHORT_OF_A_GOOD_LENGTH']
+        # Only show available options that exist in the data
+        available_lengths = [l for l in LENGTH_OPTIONS if l in length_list]
+        if not available_lengths:
+            # fallback to whatever keys are present
+            available_lengths = length_list
+
+        selected_lengths = st.multiselect("Select Length(s)", available_lengths, default=[available_lengths[0]], label_visibility="collapsed", key="length")
+
+        # Ensure at least one length is selected
+        if not selected_lengths:
+            st.warning('Please select at least one length.')
+            selected_lengths = [available_lengths[0]]
+
+        # Determine outfielder list by attempting to use combined key if present, else union across lengths
+        if len(selected_lengths) == 1:
+            length_key = selected_lengths[0]
+        else:
+            selected_lengths = sorted(selected_lengths, key=lambda x: LENGTH_OPTIONS.index(x))
+
+            # Now create the tuple
+            length_key = tuple(selected_lengths)
+
+        try:
+            outfielder_list = list(field_dict[selected_batter][selected_bowl_kind][length_key].keys())
+        except Exception:
+            # union of outfielders across selected lengths
+            out_set = set()
+            for ln in selected_lengths:
+                out_set.update(field_dict[selected_batter][selected_bowl_kind].get(ln, {}).keys())
+            outfielder_list = sorted(list(out_set))
+
         st.markdown('<p style="color: white; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem;">Select Outfielders</p>', unsafe_allow_html=True)
         selected_outfielders = st.selectbox("Select Outfielders", outfielder_list, label_visibility="collapsed", key="out")
 
     # Display section
     try:
-        data = field_dict[selected_batter][selected_bowl_kind][selected_length][selected_outfielders]
+        # Use length_key to fetch field setup from field_dict
+        try:
+            data = field_dict[selected_batter][selected_bowl_kind][length_key][selected_outfielders]
+        except KeyError:
+            st.error("No field setting found for this combination (check that composite length key exists).")
+            raise
 
         # PLAYER IMAGE AND STATS ROW
         img_col, stats_col = st.columns([1, 2], vertical_alignment="center", gap="large")
 
         with img_col:
-            # Get player image URL
-            player_img_url = player_images.get(selected_batter, "https://via.placeholder.com/300x300.png?text=No+Image")
-            st.image(player_img_url, use_container_width=True)
+            player_img_url = player_images.get(
+                selected_batter,
+                "https://via.placeholder.com/300x300.png?text=No+Image"
+            )
 
-        with stats_col:
             st.markdown(
-                f'<h1 class="player-name">{selected_batter}</h1>',
+                f"""
+                <div style="
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    height: 100%;
+                    width: 100%;
+                ">
+                    <div style="
+                        width: 280px;
+                        text-align: center;
+                    ">
+                        <img src="{player_img_url}"
+                            style="
+                                width: 100%;
+                                border-radius: 12px;
+                                display: block;
+                                margin: 0 auto;
+                            " /><p style="
+                            margin-top: 12px;
+                            margin-bottom: 0;
+                            font-size: 1.5rem;
+                            font-weight: 600;
+                            text-align: center;
+                        ">
+                            {selected_batter}
+                        </p>
+                    </div>
+                </div>
+                """,
                 unsafe_allow_html=True
             )
+
+
+
+
+        with stats_col:
+            
 
             st.markdown(
                 f'''
@@ -1275,7 +1441,7 @@ with tab1:
                     font-weight: 500;      
                     letter-spacing: 0.5px;
                 ">
-                    {selected_bowl_kind} • {selected_length} • {selected_outfielders} outfielders
+                    {selected_bowl_kind} • {', '.join(selected_lengths)} • {selected_outfielders} outfielders
                 </p>
                 ''',
                 unsafe_allow_html=True
@@ -1288,8 +1454,25 @@ with tab1:
             # ─────────────────────────────────────────────
             col1, col2 = st.columns(2)
 
-            batter_360 = dict_360[selected_batter][selected_length][selected_bowl_kind]['360_score']
-            global_360 = avg_360['A'][selected_length][selected_bowl_kind]['360_score']
+            # Average 360 score across selected lengths (missing treated as 0)
+            sel_lens = selected_lengths if isinstance(selected_lengths, list) else [selected_lengths]
+            vals = []
+            for ln in sel_lens:
+                try:
+                    v = dict_360.get(selected_batter, {}).get(ln, {}).get(selected_bowl_kind, {}).get('360_score', 0)
+                except Exception:
+                    v = 0
+                vals.append(v)
+            batter_360 = sum(vals) / len(sel_lens)
+
+            vals = []
+            for ln in sel_lens:
+                try:
+                    v = avg_360.get('A', {}).get(ln, {}).get(selected_bowl_kind, {}).get('360_score', 0)
+                except Exception:
+                    v = 0
+                vals.append(v)
+            global_360 = sum(vals) / len(sel_lens)
 
             with col1:
                 st.metric(
@@ -1310,7 +1493,18 @@ with tab1:
             col3, col4 = st.columns(2)
 
             batter_run = stats.get('running', 0)
-            global_run = field_dict['average batter'][selected_bowl_kind][selected_length][selected_outfielders]['protection_stats']['running']
+            # For protection stats, try composite key first, else average across lengths
+            try:
+                global_run = field_dict['average batter'][selected_bowl_kind][length_key][selected_outfielders]['protection_stats']['running']
+            except Exception:
+                vals = []
+                for ln in sel_lens:
+                    try:
+                        v = field_dict['average batter'][selected_bowl_kind][ln][selected_outfielders]['protection_stats']['running']
+                    except Exception:
+                        v = 0
+                    vals.append(v)
+                global_run = sum(vals) / len(sel_lens)
 
             with col3:
                 st.metric(
@@ -1331,7 +1525,17 @@ with tab1:
             col5, col6 = st.columns(2)
 
             batter_bd = stats.get('boundary', 0)
-            global_bd = field_dict['average batter'][selected_bowl_kind][selected_length][selected_outfielders]['protection_stats']['boundary']
+            try:
+                global_bd = field_dict['average batter'][selected_bowl_kind][length_key][selected_outfielders]['protection_stats']['boundary']
+            except Exception:
+                vals = []
+                for ln in sel_lens:
+                    try:
+                        v = field_dict['average batter'][selected_bowl_kind][ln][selected_outfielders]['protection_stats']['boundary']
+                    except Exception:
+                        v = 0
+                    vals.append(v)
+                global_bd = sum(vals) / len(sel_lens)
 
             with col5:
                 st.metric(
@@ -1402,7 +1606,7 @@ with tab1:
                 ev_fig = plot_sector_ev_heatmap(
                     ev_dict,
                     selected_batter,
-                    selected_length,
+                    selected_lengths,
                     selected_bowl_kind,
                     LIMIT=350,
                     THIRTY_YARD_RADIUS_M=171.25 * 350 / 500
@@ -1460,7 +1664,7 @@ with tab1:
                     zone_fig, zone_data = create_zone_strength_table(
                         dict_360,
                         selected_batter,
-                        selected_length,
+                        selected_lengths,
                         selected_bowl_kind,
                         'runs'
                     )
@@ -1471,7 +1675,7 @@ with tab1:
                     zone_fig, zone_data = create_zone_strength_table(
                         dict_360,
                         selected_batter,
-                        selected_length,
+                        selected_lengths,
                         selected_bowl_kind,
                         'avg_runs'
                     )
@@ -1487,7 +1691,7 @@ with tab1:
                         shot_fig = create_shot_profile_chart(
                             shot_per,
                             selected_batter,
-                            selected_length,
+                            selected_lengths,
                             selected_bowl_kind,
                             value_type="runs"
                         )
@@ -1499,7 +1703,7 @@ with tab1:
                         shot_fig = create_shot_profile_chart(
                             shot_per,
                             selected_batter,
-                            selected_length,
+                            selected_lengths,
                             selected_bowl_kind,
                             value_type="avg_runs"
                         )
