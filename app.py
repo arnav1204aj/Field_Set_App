@@ -303,8 +303,8 @@ def plot_field_setting(field_data):
     Ultra-modern cricket field visualization with transparent background
     and sleek design elements
     """
-    LIMIT = 350
-    THIRTY_YARD_RADIUS_M = 171.25 * LIMIT / 500
+    LIMIT = 400
+    THIRTY_YARD_RADIUS_M = LIMIT/2 - 15
 
     # Create figure with TRANSPARENT background
     fig, ax = plt.subplots(figsize=(10, 10))
@@ -405,14 +405,14 @@ def plot_field_setting(field_data):
         if is_wall:
             # 30-Yard Wall - Red hexagon with glow
             color = '#ff1744'
-            size = 550
+            size = 750
             marker = 'h'  # hexagon
             edge_width = 3.5
             glow_color = '#ff1744'
         else:
             # Regular infielder - Cyan with modern style
             color = '#00e5ff'
-            size = 350
+            size = 550
             marker = 'o'
             edge_width = 3
             glow_color = '#00e5ff'
@@ -457,7 +457,7 @@ def plot_field_setting(field_data):
             ha='center',
             va='center',
             color='white',
-            fontsize=13 if is_wall else 11,
+            fontsize=15 if is_wall else 13,
             fontweight='bold',
             zorder=12,
             family='monospace'
@@ -482,28 +482,28 @@ def plot_field_setting(field_data):
         if angle == superfielder_angle:
             color = '#ffd600'  # Bright gold
             marker = 'D'
-            size = 550
+            size = 750
             edge_width = 3.5
             glow_color = '#ffd600'
             special = True
         elif angle == sprinter_angle:
             color = '#ff6d00'  # Vibrant orange
             marker = '^'
-            size = 550
+            size = 750
             edge_width = 3.5
             glow_color = '#ff6d00'
             special = True
         elif angle == catcher_angle:
             color = '#76ff03'  # Neon lime
             marker = '*'
-            size = 600
+            size = 800
             edge_width = 3.5
             glow_color = '#76ff03'
             special = True
         else:
             color = '#e040fb'  # Bright magenta
             marker = 'o'
-            size = 350
+            size = 550
             edge_width = 3
             glow_color = '#e040fb'
             special = False
@@ -550,7 +550,7 @@ def plot_field_setting(field_data):
             ha='center',
             va='center',
             color=text_color,
-            fontsize=13 if special else 11,
+            fontsize=15 if special else 13,
             fontweight='bold',
             zorder=12,
             family='monospace'
@@ -610,48 +610,9 @@ def plot_field_setting(field_data):
     # ═══════════════════════════════
     # ANGLE MARKERS - Minimalist badges
     # ═══════════════════════════════
-    angles_config = [
-        (0, '#ff1744'),
-        (90, '#ff1744'),
-        (180, '#ff1744'),
-        (270, '#ff1744')
-    ]
     
-    for angle, badge_color in angles_config:
-        angle_rad = np.deg2rad(angle)
-        x_pos = (LIMIT + 55) * np.sin(angle_rad)
-        y_pos = (LIMIT + 55) * np.cos(angle_rad)
-        
-        # Glow behind badge
-        ax.scatter(
-            x_pos, y_pos,
-            c=badge_color,
-            s=800,
-            marker='o',
-            alpha=0.2,
-            zorder=14
-        )
-        
-        # Badge
-        ax.text(
-            x_pos, y_pos,
-            f'{angle}°',
-            color='white',
-            ha='center',
-            va='center',
-            fontweight='bold',
-            fontsize=10,
-            bbox=dict(
-                facecolor=badge_color,
-                alpha=0.95,
-                pad=6,
-                edgecolor='white',
-                linewidth=2.5,
-                boxstyle='round,pad=0.5'
-            ),
-            zorder=16,
-            family='monospace'
-        )
+    
+    
 
     # ═══════════════════════════════
     # LEGEND - Ultra-modern glass-morphic style
