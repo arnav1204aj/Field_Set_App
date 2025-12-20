@@ -234,6 +234,8 @@ st.markdown("""
     .stSelectbox [data-baseweb="select"] > div {
         background: #000000 !important;
     }
+
+              
     
     /* RESPONSIVE: Mobile adjustments */
     @media (max-width: 768px) {
@@ -1660,7 +1662,7 @@ with tab1:
 
                 # -------- LEFT: TABLE --------
                 with reg_col:
-                    st.markdown(f'<p class="subsection-header">{selected_batter}\'s Run Distribution</p>', unsafe_allow_html=True)
+                    st.markdown(f'<p class="subsection-header">Batter\'s Run Distribution</p>', unsafe_allow_html=True)
                     zone_fig, zone_data = create_zone_strength_table(
                         dict_360,
                         selected_batter,
@@ -1671,7 +1673,7 @@ with tab1:
                     if zone_fig:
                         st.pyplot(zone_fig, use_container_width=True)
                 with avg_col:  
-                    st.markdown('<p class="subsection-header">Average Batter\'s Run Distribution</p>', unsafe_allow_html=True)      
+                    st.markdown('<p class="subsection-header">Avg Batter\'s Run Distribution</p>', unsafe_allow_html=True)      
                     zone_fig, zone_data = create_zone_strength_table(
                         dict_360,
                         selected_batter,
@@ -1687,7 +1689,7 @@ with tab1:
                 reg_col, avg_col = st.columns([1.5, 1.5], gap="small")        
                 
                 with reg_col:
-                        st.markdown(f'<p class="subsection-header">{selected_batter}\'s Run Distribution</p>', unsafe_allow_html=True)
+                        st.markdown(f'<p class="subsection-header">Batter\'s Run Distribution</p>', unsafe_allow_html=True)
                         shot_fig = create_shot_profile_chart(
                             shot_per,
                             selected_batter,
@@ -1699,7 +1701,7 @@ with tab1:
                             st.pyplot(shot_fig, use_container_width=True) 
 
                 with avg_col:
-                        st.markdown('<p class="subsection-header">Average Batter\'s Run Distribution</p>', unsafe_allow_html=True)
+                        st.markdown('<p class="subsection-header">Avg Batter\'s Run Distribution</p>', unsafe_allow_html=True)
                         shot_fig = create_shot_profile_chart(
                             shot_per,
                             selected_batter,
