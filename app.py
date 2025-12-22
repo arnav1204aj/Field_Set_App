@@ -1289,435 +1289,446 @@ with tab1:
     field_dict = field_dict_t20 
 
     # Sidebar selection
+    # Sidebar selection
     with st.sidebar:
         st.markdown('<p class="section-header">Parameters</p>', unsafe_allow_html=True)
+        
+        with st.form(key='field_form'):
+            submit = st.form_submit_button("Generate Results", use_container_width=True)
+            # Batter selection
+            batter_list = list(field_dict.keys())
+            st.markdown('<p style="color: white; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem;">Select Batter</p>', unsafe_allow_html=True)
+            selected_batter = st.selectbox("Select Batter", batter_list, label_visibility="collapsed", key="batter")
 
-        batter_list = list(field_dict.keys())
-        st.markdown('<p style="color: white; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem;">Select Batter</p>', unsafe_allow_html=True)
-        selected_batter = st.selectbox("Select Batter", batter_list, label_visibility="collapsed", key="batter")
+            # Bowl kind selection
+            bowl_kind_list = list(field_dict[selected_batter].keys())
+            st.markdown('<p style="color: white; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem;">Select Bowling Type</p>', unsafe_allow_html=True)
+            selected_bowl_kind = st.selectbox("Select Bowling Type", bowl_kind_list, label_visibility="collapsed", key="bowl")
 
-        bowl_kind_list = list(field_dict[selected_batter].keys())
-        st.markdown('<p style="color: white; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem;">Select Bowling Type</p>', unsafe_allow_html=True)
-        selected_bowl_kind = st.selectbox("Select Bowling Type", bowl_kind_list, label_visibility="collapsed", key="bowl")
+            # Length selection
+            length_list = list(field_dict[selected_batter][selected_bowl_kind].keys())
+            st.markdown('<p style="color: white; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem;">Select Length(s)</p>', unsafe_allow_html=True)
 
-        length_list = list(field_dict[selected_batter][selected_bowl_kind].keys())
-        st.markdown('<p style="color: white; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem;">Select Length(s)</p>', unsafe_allow_html=True)
+            LENGTH_OPTIONS = ['FULL', 'SHORT', 'GOOD_LENGTH', 'SHORT_OF_A_GOOD_LENGTH']
+            available_lengths = [l for l in LENGTH_OPTIONS if l in length_list]
+            if not available_lengths:
+                available_lengths = length_list
 
-        LENGTH_OPTIONS = ['FULL', 'SHORT', 'GOOD_LENGTH', 'SHORT_OF_A_GOOD_LENGTH']
-        # Only show available options that exist in the data
-        available_lengths = [l for l in LENGTH_OPTIONS if l in length_list]
-        if not available_lengths:
-            # fallback to whatever keys are present
-            available_lengths = length_list
+            selected_lengths = st.multiselect("Select Length(s)", available_lengths, default=[available_lengths[0]], label_visibility="collapsed", key="length")
 
-        selected_lengths = st.multiselect("Select Length(s)", available_lengths, default=[available_lengths[0]], label_visibility="collapsed", key="length")
+            # Ensure at least one length is selected
+            if not selected_lengths:
+                st.warning('Please select at least one length.')
+                selected_lengths = [available_lengths[0]]
 
-        # Ensure at least one length is selected
-        if not selected_lengths:
-            st.warning('Please select at least one length.')
-            selected_lengths = [available_lengths[0]]
+            # Determine length_key (single or tuple)
+            if len(selected_lengths) == 1:
+                length_key = selected_lengths[0]
+            else:
+                selected_lengths_sorted = sorted(selected_lengths, key=lambda x: LENGTH_OPTIONS.index(x))
+                length_key = tuple(selected_lengths_sorted)
 
-        # Determine outfielder list by attempting to use combined key if present, else union across lengths
-        if len(selected_lengths) == 1:
-            length_key = selected_lengths[0]
-        else:
-            selected_lengths = sorted(selected_lengths, key=lambda x: LENGTH_OPTIONS.index(x))
+            # Outfielder selection
+            try:
+                outfielder_list = list(field_dict[selected_batter][selected_bowl_kind][length_key].keys())
+            except Exception:
+                # Union of outfielders across selected lengths
+                out_set = set()
+                for ln in selected_lengths:
+                    out_set.update(field_dict[selected_batter][selected_bowl_kind].get(ln, {}).keys())
+                outfielder_list = sorted(list(out_set))
 
-            # Now create the tuple
-            length_key = tuple(selected_lengths)
+            st.markdown('<p style="color: white; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem;">Select Outfielders</p>', unsafe_allow_html=True)
+            selected_outfielders = st.selectbox("Select Outfielders", outfielder_list, label_visibility="collapsed", key="out")
 
+            # Generate button
+            
+
+
+
+    if submit:
         try:
-            outfielder_list = list(field_dict[selected_batter][selected_bowl_kind][length_key].keys())
-        except Exception:
-            # union of outfielders across selected lengths
-            out_set = set()
-            for ln in selected_lengths:
-                out_set.update(field_dict[selected_batter][selected_bowl_kind].get(ln, {}).keys())
-            outfielder_list = sorted(list(out_set))
+            # Use length_key to fetch field setup from field_dict
+            try:
+                data = field_dict[selected_batter][selected_bowl_kind][length_key][selected_outfielders]
+            except KeyError:
+                st.error("No field setting found for this combination.")
+                raise
 
-        st.markdown('<p style="color: white; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem;">Select Outfielders</p>', unsafe_allow_html=True)
-        selected_outfielders = st.selectbox("Select Outfielders", outfielder_list, label_visibility="collapsed", key="out")
+            # PLAYER IMAGE AND STATS ROW
+            img_col, stats_col = st.columns([1, 2], vertical_alignment="center", gap="large")
 
-    # Display section
-    try:
-        # Use length_key to fetch field setup from field_dict
-        try:
-            data = field_dict[selected_batter][selected_bowl_kind][length_key][selected_outfielders]
-        except KeyError:
-            st.error("No field setting found for this combination (check that composite length key exists).")
-            raise
+            with img_col:
+                player_img_url = player_images.get(
+                    selected_batter,
+                    "https://via.placeholder.com/300x300.png?text=No+Image"
+                )
 
-        # PLAYER IMAGE AND STATS ROW
-        img_col, stats_col = st.columns([1, 2], vertical_alignment="center", gap="large")
-
-        with img_col:
-            player_img_url = player_images.get(
-                selected_batter,
-                "https://via.placeholder.com/300x300.png?text=No+Image"
-            )
-
-            st.markdown(
-                f"""
-                <div style="
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    height: 100%;
-                    width: 100%;
-                ">
+                st.markdown(
+                    f"""
                     <div style="
-                        width: 280px;
-                        text-align: center;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        height: 100%;
+                        width: 100%;
                     ">
-                        <img src="{player_img_url}"
-                            style="
-                                width: 100%;
-                                border-radius: 12px;
-                                display: block;
-                                margin: 0 auto;
-                            " /><p style="
-                            margin-top: 12px;
-                            margin-bottom: 0;
-                            font-size: 1.5rem;
-                            font-weight: 600;
+                        <div style="
+                            width: 280px;
                             text-align: center;
                         ">
-                            {selected_batter}
-                        </p>
+                            <img src="{player_img_url}"
+                                style="
+                                    width: 100%;
+                                    border-radius: 12px;
+                                    display: block;
+                                    margin: 0 auto;
+                                " /><p style="
+                                margin-top: 12px;
+                                margin-bottom: 0;
+                                font-size: 1.5rem;
+                                font-weight: 600;
+                                text-align: center;
+                            ">
+                                {selected_batter}
+                            </p>
+                        </div>
                     </div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+                    """,
+                    unsafe_allow_html=True
+                )
 
 
 
 
-        with stats_col:
+            with stats_col:
+                
+
+                st.markdown(
+                    f'''
+                    <p class="context-info" style="
+                        color: rgba(255,255,255,0.7);
+                        font-size: 1.1rem;
+                        font-weight: 500;      
+                        letter-spacing: 0.5px;
+                    ">
+                        {selected_bowl_kind} • {', '.join(selected_lengths)} • {selected_outfielders} outfielders
+                    </p>
+                    ''',
+                    unsafe_allow_html=True
+                )
+
+                stats = data['protection_stats']
+
+                # ─────────────────────────────────────────────
+                # 📊 ROW 1 : 360 SCORES (Higher = Better)
+                # ─────────────────────────────────────────────
+                col1, col2 = st.columns(2)
+
+                # Average 360 score across selected lengths (missing treated as 0)
+                sel_lens = selected_lengths if isinstance(selected_lengths, list) else [selected_lengths]
+                vals = []
+                for ln in sel_lens:
+                    try:
+                        v = dict_360.get(selected_batter, {}).get(ln, {}).get(selected_bowl_kind, {}).get('360_score', 0)
+                    except Exception:
+                        v = 0
+                    vals.append(v)
+                batter_360 = sum(vals) / len(sel_lens)
+
+                vals = []
+                for ln in sel_lens:
+                    try:
+                        v = avg_360.get('A', {}).get(ln, {}).get(selected_bowl_kind, {}).get('360_score', 0)
+                    except Exception:
+                        v = 0
+                    vals.append(v)
+                global_360 = sum(vals) / len(sel_lens)
+
+                with col1:
+                    st.metric(
+                        "BATTER 360 SCORE",
+                        f"{batter_360:.1f}",
+                        delta=f"{batter_360 - global_360:.1f}"
+                    )
+
+                with col2:
+                    st.metric(
+                        "GLOBAL AVG (360)",
+                        f"{global_360:.1f}"
+                    )
+
+                # ─────────────────────────────────────────────
+                # 🏃 ROW 2 : RUNNING PROTECTION (Lower = Better)
+                # ─────────────────────────────────────────────
+                col3, col4 = st.columns(2)
+
+                batter_run = stats.get('running', 0)
+                # For protection stats, try composite key first, else average across lengths
+                try:
+                    global_run = field_dict['average batter'][selected_bowl_kind][length_key][selected_outfielders]['protection_stats']['running']
+                except Exception:
+                    vals = []
+                    for ln in sel_lens:
+                        try:
+                            v = field_dict['average batter'][selected_bowl_kind][ln][selected_outfielders]['protection_stats']['running']
+                        except Exception:
+                            v = 0
+                        vals.append(v)
+                    global_run = sum(vals) / len(sel_lens)
+
+                with col3:
+                    st.metric(
+                        "RUNNING PROTECTION",
+                        f"{batter_run:.1f}%",
+                        delta=f"{global_run - batter_run:.1f}%"
+                    )
+
+                with col4:
+                    st.metric(
+                        "GLOBAL AVG (RUN. PROT.)",
+                        f"{global_run:.1f}%"
+                    )
+
+                # ─────────────────────────────────────────────
+                # 🧱 ROW 3 : BOUNDARY PROTECTION (Lower = Better)
+                # ─────────────────────────────────────────────
+                col5, col6 = st.columns(2)
+
+                batter_bd = stats.get('boundary', 0)
+                try:
+                    global_bd = field_dict['average batter'][selected_bowl_kind][length_key][selected_outfielders]['protection_stats']['boundary']
+                except Exception:
+                    vals = []
+                    for ln in sel_lens:
+                        try:
+                            v = field_dict['average batter'][selected_bowl_kind][ln][selected_outfielders]['protection_stats']['boundary']
+                        except Exception:
+                            v = 0
+                        vals.append(v)
+                    global_bd = sum(vals) / len(sel_lens)
+
+                with col5:
+                    st.metric(
+                        "BOUNDARY PROTECTION",
+                        f"{batter_bd:.1f}%",
+                        delta=f"{global_bd - batter_bd:.1f}%"
+                    )
+
+                with col6:
+                    st.metric(
+                        "GLOBAL AVG (BD. PROT.)",
+                        f"{global_bd:.1f}%"
+                    )
+
+            st.markdown("---")
+
+
+                
             
 
-            st.markdown(
-                f'''
-                <p class="context-info" style="
-                    color: rgba(255,255,255,0.7);
-                    font-size: 1.1rem;
-                    font-weight: 500;      
-                    letter-spacing: 0.5px;
-                ">
-                    {selected_bowl_kind} • {', '.join(selected_lengths)} • {selected_outfielders} outfielders
-                </p>
-                ''',
-                unsafe_allow_html=True
-            )
-
-            stats = data['protection_stats']
-
-            # ─────────────────────────────────────────────
-            # 📊 ROW 1 : 360 SCORES (Higher = Better)
-            # ─────────────────────────────────────────────
-            col1, col2 = st.columns(2)
-
-            # Average 360 score across selected lengths (missing treated as 0)
-            sel_lens = selected_lengths if isinstance(selected_lengths, list) else [selected_lengths]
-            vals = []
-            for ln in sel_lens:
-                try:
-                    v = dict_360.get(selected_batter, {}).get(ln, {}).get(selected_bowl_kind, {}).get('360_score', 0)
-                except Exception:
-                    v = 0
-                vals.append(v)
-            batter_360 = sum(vals) / len(sel_lens)
-
-            vals = []
-            for ln in sel_lens:
-                try:
-                    v = avg_360.get('A', {}).get(ln, {}).get(selected_bowl_kind, {}).get('360_score', 0)
-                except Exception:
-                    v = 0
-                vals.append(v)
-            global_360 = sum(vals) / len(sel_lens)
+            # FIELD AND CONTRIBUTIONS
+            col1, col2 = st.columns([1.6, 1.4])
 
             with col1:
-                st.metric(
-                    "BATTER 360 SCORE",
-                    f"{batter_360:.1f}",
-                    delta=f"{batter_360 - global_360:.1f}"
-                )
+                st.markdown('<p class="section-header">Field Placement</p>', unsafe_allow_html=True)
+                fig, inf_labels, out_labels = plot_field_setting(data)
+                st.pyplot(fig, use_container_width=True)
 
             with col2:
-                st.metric(
-                    "GLOBAL AVG (360)",
-                    f"{global_360:.1f}"
-                )
+                st.markdown('<p class="section-header">Fielder Contributions</p>', unsafe_allow_html=True)
+                
+                inf_contrib = data.get('infielder_ev_run_percent', [])
+                out_contrib = data.get('outfielder_ev_bd_percent', [])
 
-            # ─────────────────────────────────────────────
-            # 🏃 ROW 2 : RUNNING PROTECTION (Lower = Better)
-            # ─────────────────────────────────────────────
-            col3, col4 = st.columns(2)
+                inf_col, out_col = st.columns(2)
 
-            batter_run = stats.get('running', 0)
-            # For protection stats, try composite key first, else average across lengths
-            try:
-                global_run = field_dict['average batter'][selected_bowl_kind][length_key][selected_outfielders]['protection_stats']['running']
-            except Exception:
-                vals = []
-                for ln in sel_lens:
-                    try:
-                        v = field_dict['average batter'][selected_bowl_kind][ln][selected_outfielders]['protection_stats']['running']
-                    except Exception:
-                        v = 0
-                    vals.append(v)
-                global_run = sum(vals) / len(sel_lens)
+                with inf_col:
+                    st.markdown('<p class="contribution-title">Infielders</p>', unsafe_allow_html=True)
+                    if inf_contrib:
+                        for f in inf_contrib:
+                            angle = f["angle"]
+                            label = inf_labels.get(angle, f"Angle {angle}°")
+                            st.markdown(f'<div class="contribution-item">{label} → {f.get("ev_run_percent", 0):.1f}% runs saved</div>', unsafe_allow_html=True)
+                    else:
+                        st.write("No data available")
 
-            with col3:
-                st.metric(
-                    "RUNNING PROTECTION",
-                    f"{batter_run:.1f}%",
-                    delta=f"{global_run - batter_run:.1f}%"
-                )
-
-            with col4:
-                st.metric(
-                    "GLOBAL AVG (RUN. PROT.)",
-                    f"{global_run:.1f}%"
-                )
-
-            # ─────────────────────────────────────────────
-            # 🧱 ROW 3 : BOUNDARY PROTECTION (Lower = Better)
-            # ─────────────────────────────────────────────
-            col5, col6 = st.columns(2)
-
-            batter_bd = stats.get('boundary', 0)
-            try:
-                global_bd = field_dict['average batter'][selected_bowl_kind][length_key][selected_outfielders]['protection_stats']['boundary']
-            except Exception:
-                vals = []
-                for ln in sel_lens:
-                    try:
-                        v = field_dict['average batter'][selected_bowl_kind][ln][selected_outfielders]['protection_stats']['boundary']
-                    except Exception:
-                        v = 0
-                    vals.append(v)
-                global_bd = sum(vals) / len(sel_lens)
-
-            with col5:
-                st.metric(
-                    "BOUNDARY PROTECTION",
-                    f"{batter_bd:.1f}%",
-                    delta=f"{global_bd - batter_bd:.1f}%"
-                )
-
-            with col6:
-                st.metric(
-                    "GLOBAL AVG (BD. PROT.)",
-                    f"{global_bd:.1f}%"
-                )
-
-        st.markdown("---")
-
-
+                with out_col:
+                    st.markdown('<p class="contribution-title">Outfielders</p>', unsafe_allow_html=True)
+                    if out_contrib:
+                        for f in out_contrib:
+                            angle = f["angle"]
+                            label = out_labels.get(angle, f"Angle {angle}°")
+                            st.markdown(f'<div class="contribution-item">{label} → {f.get("ev_bd_percent", 0):.1f}% runs saved</div>', unsafe_allow_html=True)
+                    else:
+                        st.write("No data available")
+            st.markdown("---")
             
-        
-
-        # FIELD AND CONTRIBUTIONS
-        col1, col2 = st.columns([1.6, 1.4])
-
-        with col1:
-            st.markdown('<p class="section-header">Field Placement</p>', unsafe_allow_html=True)
-            fig, inf_labels, out_labels = plot_field_setting(data)
-            st.pyplot(fig, use_container_width=True)
-
-        with col2:
-            st.markdown('<p class="section-header">Fielder Contributions</p>', unsafe_allow_html=True)
-            
-            inf_contrib = data.get('infielder_ev_run_percent', [])
-            out_contrib = data.get('outfielder_ev_bd_percent', [])
-
-            inf_col, out_col = st.columns(2)
-
-            with inf_col:
-                st.markdown('<p class="contribution-title">Infielders</p>', unsafe_allow_html=True)
-                if inf_contrib:
-                    for f in inf_contrib:
-                        angle = f["angle"]
-                        label = inf_labels.get(angle, f"Angle {angle}°")
-                        st.markdown(f'<div class="contribution-item">{label} → {f.get("ev_run_percent", 0):.1f}% runs saved</div>', unsafe_allow_html=True)
-                else:
-                    st.write("No data available")
-
-            with out_col:
-                st.markdown('<p class="contribution-title">Outfielders</p>', unsafe_allow_html=True)
-                if out_contrib:
-                    for f in out_contrib:
-                        angle = f["angle"]
-                        label = out_labels.get(angle, f"Angle {angle}°")
-                        st.markdown(f'<div class="contribution-item">{label} → {f.get("ev_bd_percent", 0):.1f}% runs saved</div>', unsafe_allow_html=True)
-                else:
-                    st.write("No data available")
-        st.markdown("---")
-        
-        # SECTOR IMPORTANCE PLOT
-        if ev_dict and selected_batter in ev_dict:
-            st.markdown('<p class="section-header">Sector Importance Analysis</p>', unsafe_allow_html=True)
-            
-            # Wrapper with flexbox
-            st.markdown('<div style="display: flex; align-items: center; gap: 2rem;">', unsafe_allow_html=True)
-            
-            plot_col, info_col = st.columns([1.6, 1.4])
-            
-            with plot_col:
-                ev_fig = plot_sector_ev_heatmap(
-                    ev_dict,
-                    selected_batter,
-                    selected_lengths,
-                    selected_bowl_kind,
-                    LIMIT=350,
-                    THIRTY_YARD_RADIUS_M=171.25 * 350 / 500
-                )
-                if ev_fig:
-                    st.pyplot(ev_fig, use_container_width=True)
-            
-            with info_col:
-                st.markdown("""
-                <div style="
-                    background: linear-gradient(135deg, rgba(153, 27, 27, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%);
-                    padding: 1.5rem;
-                    border-radius: 12px;
-                    border: 1px solid rgba(220,38,38,0.3);
-                    height: 100%;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: center;
-                ">
-                    <h3 style="color: #fca5a5; font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem;">
-                        Understanding the Heatmap
-                    </h3>
-                    <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem; margin-bottom: 1rem;">
-                        This polar heatmap shows the <strong>Importance (SR × Probability in that sector)</strong> of different sectors of the field.
-                    </p>
-                    <div style="margin: 0.8rem 0;">
-                        <strong style="color: #fca5a5;">Inner Ring:</strong>
-                        <span style="color: rgba(255,255,255,0.85);"> Running Class Runs</span>
-                    </div>
-                    <div style="margin: 0.8rem 0;">
-                        <strong style="color: #fca5a5;">Outer Ring:</strong>
-                        <span style="color: rgba(255,255,255,0.85);"> Boundary Class Runs</span>
-                    </div>
-                    <p style="color: rgba(255,255,255,0.75); font-size: 0.9rem; margin-top: 1rem; font-style: italic;">
-                        Brighter colors indicate higher sector importance and thus a priority region for the fielding teams.
-                    </p>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            st.markdown('</div>', unsafe_allow_html=True)
-
-                # After the Sector Importance section, add:
-        
-        st.markdown("---")
-        
-        # RELATIVE ZONE STRENGTHS
-        if dict_360 and selected_batter in dict_360:
-                st.markdown('<p class="section-header">Relative Zone Strengths</p>', unsafe_allow_html=True)
-
-                reg_col, avg_col = st.columns([1.5, 1.5], gap="small")
-
-                # -------- LEFT: TABLE --------
-                with reg_col:
-                    st.markdown(f'<p class="subsection-header">Batter\'s Run Distribution</p>', unsafe_allow_html=True)
-                    zone_fig, zone_data = create_zone_strength_table(
-                        dict_360,
+            # SECTOR IMPORTANCE PLOT
+            if ev_dict and selected_batter in ev_dict:
+                st.markdown('<p class="section-header">Sector Importance Analysis</p>', unsafe_allow_html=True)
+                
+                # Wrapper with flexbox
+                st.markdown('<div style="display: flex; align-items: center; gap: 2rem;">', unsafe_allow_html=True)
+                
+                plot_col, info_col = st.columns([1.6, 1.4])
+                
+                with plot_col:
+                    ev_fig = plot_sector_ev_heatmap(
+                        ev_dict,
                         selected_batter,
                         selected_lengths,
                         selected_bowl_kind,
-                        'runs'
+                        LIMIT=350,
+                        THIRTY_YARD_RADIUS_M=171.25 * 350 / 500
                     )
-                    if zone_fig:
-                        st.pyplot(zone_fig, use_container_width=True)
-                with avg_col:  
-                    st.markdown('<p class="subsection-header">Avg Batter\'s Run Distribution</p>', unsafe_allow_html=True)      
-                    zone_fig, zone_data = create_zone_strength_table(
-                        dict_360,
-                        selected_batter,
-                        selected_lengths,
-                        selected_bowl_kind,
-                        'avg_runs'
-                    )
-                    if zone_fig:
-                        st.pyplot(zone_fig, use_container_width=True)    
+                    if ev_fig:
+                        st.pyplot(ev_fig, use_container_width=True)
                 
-                st.markdown('<p class="section-header">Relative Shot Strengths</p>', unsafe_allow_html=True)
+                with info_col:
+                    st.markdown("""
+                    <div style="
+                        background: linear-gradient(135deg, rgba(153, 27, 27, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%);
+                        padding: 1.5rem;
+                        border-radius: 12px;
+                        border: 1px solid rgba(220,38,38,0.3);
+                        height: 100%;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                    ">
+                        <h3 style="color: #fca5a5; font-size: 1.2rem; font-weight: 700; margin-bottom: 1rem;">
+                            Understanding the Heatmap
+                        </h3>
+                        <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem; margin-bottom: 1rem;">
+                            This polar heatmap shows the <strong>Importance (SR × Probability in that sector)</strong> of different sectors of the field.
+                        </p>
+                        <div style="margin: 0.8rem 0;">
+                            <strong style="color: #fca5a5;">Inner Ring:</strong>
+                            <span style="color: rgba(255,255,255,0.85);"> Running Class Runs</span>
+                        </div>
+                        <div style="margin: 0.8rem 0;">
+                            <strong style="color: #fca5a5;">Outer Ring:</strong>
+                            <span style="color: rgba(255,255,255,0.85);"> Boundary Class Runs</span>
+                        </div>
+                        <p style="color: rgba(255,255,255,0.75); font-size: 0.9rem; margin-top: 1rem; font-style: italic;">
+                            Brighter colors indicate higher sector importance and thus a priority region for the fielding teams.
+                        </p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                st.markdown('</div>', unsafe_allow_html=True)
 
-                reg_col, avg_col = st.columns([1.5, 1.5], gap="small")        
-                
-                with reg_col:
+                    # After the Sector Importance section, add:
+            
+            st.markdown("---")
+            
+            # RELATIVE ZONE STRENGTHS
+            if dict_360 and selected_batter in dict_360:
+                    st.markdown('<p class="section-header">Relative Zone Strengths</p>', unsafe_allow_html=True)
+
+                    reg_col, avg_col = st.columns([1.5, 1.5], gap="small")
+
+                    # -------- LEFT: TABLE --------
+                    with reg_col:
                         st.markdown(f'<p class="subsection-header">Batter\'s Run Distribution</p>', unsafe_allow_html=True)
-                        shot_fig = create_shot_profile_chart(
-                            shot_per,
+                        zone_fig, zone_data = create_zone_strength_table(
+                            dict_360,
                             selected_batter,
                             selected_lengths,
                             selected_bowl_kind,
-                            value_type="runs"
+                            'runs'
                         )
-                        if shot_fig:
-                            st.pyplot(shot_fig, use_container_width=True) 
-
-                with avg_col:
-                        st.markdown('<p class="subsection-header">Avg Batter\'s Run Distribution</p>', unsafe_allow_html=True)
-                        shot_fig = create_shot_profile_chart(
-                            shot_per,
+                        if zone_fig:
+                            st.pyplot(zone_fig, use_container_width=True)
+                    with avg_col:  
+                        st.markdown('<p class="subsection-header">Avg Batter\'s Run Distribution</p>', unsafe_allow_html=True)      
+                        zone_fig, zone_data = create_zone_strength_table(
+                            dict_360,
                             selected_batter,
                             selected_lengths,
                             selected_bowl_kind,
-                            value_type="avg_runs"
+                            'avg_runs'
                         )
-                        if shot_fig:
-                            st.pyplot(shot_fig, use_container_width=True)           
+                        if zone_fig:
+                            st.pyplot(zone_fig, use_container_width=True)    
+                    
+                    st.markdown('<p class="section-header">Relative Shot Strengths</p>', unsafe_allow_html=True)
 
-                # -------- RIGHT: EXPLAINER --------
+                    reg_col, avg_col = st.columns([1.5, 1.5], gap="small")        
+                    
+                    with reg_col:
+                            st.markdown(f'<p class="subsection-header">Batter\'s Run Distribution</p>', unsafe_allow_html=True)
+                            shot_fig = create_shot_profile_chart(
+                                shot_per,
+                                selected_batter,
+                                selected_lengths,
+                                selected_bowl_kind,
+                                value_type="runs"
+                            )
+                            if shot_fig:
+                                st.pyplot(shot_fig, use_container_width=True) 
+
+                    with avg_col:
+                            st.markdown('<p class="subsection-header">Avg Batter\'s Run Distribution</p>', unsafe_allow_html=True)
+                            shot_fig = create_shot_profile_chart(
+                                shot_per,
+                                selected_batter,
+                                selected_lengths,
+                                selected_bowl_kind,
+                                value_type="avg_runs"
+                            )
+                            if shot_fig:
+                                st.pyplot(shot_fig, use_container_width=True)           
+
+                    # -------- RIGHT: EXPLAINER --------
+                    
+                    st.markdown("""
+                    <div style="
+                        background: linear-gradient(135deg, rgba(153, 27, 27, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%);
+                        padding: 1.5rem;
+                        border-radius: 12px;
+                        border: 1px solid rgba(220,38,38,0.3);
+                        height: 100%;
+                    ">
+                        <h3 style="color: #fca5a5; font-size: 1.2rem; font-weight: 700; margin-top: 0;">
+                            Understanding Zone and Shot Strengths
+                        </h3>
+                        <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem;">
+                            The table and chart show how the batter distributes their runs across four key regions and different shots.<strong> To understand the batter's true strength 
+                            in a particular region or playing a particular shot, we compare his distributions to an 
+                            average batter's distributions </strong>. Average batter's calculations are done on the same 
+                            line-length distribution the batter has faced in his career. The calculations consider run scoring
+                            difficulty of a region or shot for the given line-length-bathand-pace/spin combination. 
+                        </p>
+                                <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem;">
+                            The drives include both lofted and grounded drives.
+                        </p>
+                    
+                    </div>
+                    """, unsafe_allow_html=True)
+
+
+
+            
                 
-                st.markdown("""
-                <div style="
-                    background: linear-gradient(135deg, rgba(153, 27, 27, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%);
-                    padding: 1.5rem;
-                    border-radius: 12px;
-                    border: 1px solid rgba(220,38,38,0.3);
-                    height: 100%;
-                ">
-                    <h3 style="color: #fca5a5; font-size: 1.2rem; font-weight: 700; margin-top: 0;">
-                        Understanding Zone and Shot Strengths
-                    </h3>
-                    <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem;">
-                        The table and chart show how the batter distributes their runs across four key regions and different shots.<strong> To understand the batter's true strength 
-                        in a particular region or playing a particular shot, we compare his distributions to an 
-                        average batter's distributions </strong>. Average batter's calculations are done on the same 
-                        line-length distribution the batter has faced in his career. The calculations consider run scoring
-                        difficulty of a region or shot for the given line-length-bathand-pace/spin combination. 
-                    </p>
-                            <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem;">
-                        The drives include both lofted and grounded drives.
-                    </p>
-                   
-                </div>
-                """, unsafe_allow_html=True)
-
-
-
+                
+                
+                
+                
+                    # Add spacer for vertical centering
+                
         
             
-            
-            
-            
-            
-                # Add spacer for vertical centering
-            
+
+        except KeyError:
+            st.error("No data available for this combination.")
+        except Exception as e:
+            st.error(f"Unexpected error: {e}")
     
-          
-
-    except KeyError:
-        st.error("No data available for this combination.")
-    except Exception as e:
-        st.error(f"Unexpected error: {e}")
-
+    else:
+        st.info("Please select parameters and click **Generate Results**")
+        
 # ─────────────────────────────
 # Info Tab
 # ─────────────────────────────
