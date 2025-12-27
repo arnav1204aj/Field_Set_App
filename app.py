@@ -928,7 +928,7 @@ def plot_sector_ev_heatmap(
 
 def create_zone_strength_table(dict_360, batter_name, selected_lengths, bowl_kind, kind):
     """
-    Modern transparent table with glassmorphic design
+    Clean stacked bar chart showing zone distributions across run classes
     """
     try:
         # Normalize selected_lengths to list
@@ -937,124 +937,152 @@ def create_zone_strength_table(dict_360, batter_name, selected_lengths, bowl_kin
         else:
             sel_lens = list(selected_lengths)
 
-        # Aggregate data across lengths by averaging (missing treated as zeros)
-        # Keys expected: total_runs, st_runs / st_avg_runs, leg_..., off_..., bk_...
-        keys_union = set()
-        per_len_data = {}
-        for ln in sel_lens:
-            try:
-                per = dict_360[batter_name].get(ln, {}).get(bowl_kind)
-                per_len_data[ln] = per
-                if per:
-                    keys_union.update(per.keys())
-            except Exception:
-                per_len_data[ln] = None
-
-        if not keys_union:
-            st.warning('No 360 data available for selected lengths.')
-            return None, None
-
-        # Build averaged data dict
-        data = {}
-        for key in keys_union:
-            vals = []
+        # Aggregate data across lengths
+        run_classes = ['overall', 'running', 'boundary']
+        aggregated = {rc: {} for rc in run_classes}
+        
+        for rc in run_classes:
+            keys_union = set()
+            per_len_data = {}
+            
             for ln in sel_lens:
-                per = per_len_data.get(ln)
-                if not per or key not in per:
-                    vals.append(0.0)
-                else:
-                    vals.append(per[key])
-            # average
-            data[key] = sum(vals) / len(sel_lens)
-        total_eff = data.get('total_runs', 0)
+                try:
+                    per = dict_360[batter_name].get(ln, {}).get(bowl_kind, {}).get(rc)
+                    per_len_data[ln] = per
+                    if per:
+                        keys_union.update(per.keys())
+                except Exception:
+                    per_len_data[ln] = None
+            
+            # Build averaged data
+            for key in keys_union:
+                vals = [per_len_data[ln].get(key, 0.0) if per_len_data[ln] else 0.0 
+                       for ln in sel_lens]
+                aggregated[rc][key] = sum(vals) / len(sel_lens)
 
-        zones = {
-            'Straight': (data.get(f'st_{kind}', 0) / total_eff * 100) if total_eff else 0,
-            'Leg Side': (data.get(f'leg_{kind}', 0) / total_eff * 100) if total_eff else 0,
-            'Off Side': (data.get(f'off_{kind}', 0) / total_eff * 100) if total_eff else 0,
-            'Behind': (data.get(f'bk_{kind}', 0) / total_eff * 100) if total_eff else 0
-        }
+        # Calculate zone percentages for each run class
+        all_zones = {}
+        for rc in run_classes:
+            data = aggregated[rc]
+            total = data.get('total_runs', 0)
+            
+            all_zones[rc] = {
+                'Straight': (data.get(f'st_{kind}', 0) / total * 100) if total else 0,
+                'Leg': (data.get(f'leg_{kind}', 0) / total * 100) if total else 0,
+                'Off': (data.get(f'off_{kind}', 0) / total * 100) if total else 0,
+                'Behind': (data.get(f'bk_{kind}', 0) / total * 100) if total else 0
+            }
 
-        # TRANSPARENT FIGURE
-        fig, ax = plt.subplots(figsize=(6.5, 4.5))
+        # CREATE FIGURE - Single horizontal stacked bar chart
+        fig, ax = plt.subplots(figsize=(12, 5))
         fig.patch.set_alpha(0.0)
         ax.set_facecolor('none')
-        ax.axis('off')
-
-        table_data = [[z, f"{v:.1f}%"] for z, v in zones.items()]
-        col_widths = [0.5, 0.5]
-
-        table = ax.table(
-            cellText=table_data,
-            colLabels=['Region', 'Percentage'],
-            cellLoc='center',
+        
+        # Zone colors (red gradient theme)
+        zone_colors = {
+            'Straight': '#dc2626',
+            'Leg': '#f97316',
+            'Off': '#fbbf24',
+            'Behind': '#991b1b'
+        }
+        
+        # Labels
+        rc_labels = {
+            'overall': 'Overall',
+            'running': 'Running',
+            'boundary': 'Boundary'
+        }
+        
+        zones_order = ['Straight', 'Leg', 'Off', 'Behind']
+        y_positions = [2, 1, 0]  # reversed for top-to-bottom
+        
+        # Draw stacked bars
+        for idx, rc in enumerate(run_classes):
+            zones = all_zones[rc]
+            left = 0
+            
+            for zone in zones_order:
+                pct = zones[zone]
+                
+                bar = ax.barh(
+                    y_positions[idx],
+                    pct,
+                    left=left,
+                    height=0.6,
+                    color=zone_colors[zone],
+                    edgecolor='white',
+                    linewidth=2,
+                    alpha=0.9,
+                    label=zone if idx == 0 else ""
+                )
+                
+                # Add percentage text if segment is large enough
+                if pct > 5:
+                    ax.text(
+                        left + pct/2,
+                        y_positions[idx],
+                        f'{pct:.1f}%',
+                        ha='center',
+                        va='center',
+                        fontsize=15,  # Increased from 10
+                        fontweight='bold',
+                        color='white'
+                    )
+                
+                left += pct
+        
+        # Styling
+        ax.set_yticks(y_positions)
+        ax.set_yticklabels(
+            [rc_labels[rc] for rc in run_classes], 
+            fontsize=25,  # Increased from 12
+            fontweight='bold', 
+            color='white'
+        )
+        ax.set_xlim(0, 100)
+        ax.set_xlabel('Percentage (%)', fontsize=20, fontweight='bold', color='white')
+        
+        # Grid
+        ax.grid(axis='x', color='white', alpha=0.2, linestyle='--', linewidth=0.8)
+        ax.set_axisbelow(True)
+        
+        # Spines
+        for spine in ax.spines.values():
+            spine.set_color('white')
+            spine.set_linewidth(1.5)
+        
+        ax.tick_params(colors='white', labelsize=20)
+        
+        # Legend - INCREASED FONT SIZE
+        legend = ax.legend(
             loc='upper center',
-            colWidths=col_widths
+            bbox_to_anchor=(0.5, 1.25),  # Moved up slightly
+            ncol=4,
+            frameon=True,
+            facecolor='#1a0000',
+            edgecolor='white',
+            framealpha=0.9,
+            fontsize=20,  # Increased from 10
+            labelcolor='white',
+            handlelength=1.5,
+            handleheight=1.5,
+            columnspacing=1.5
         )
-
-        table.auto_set_font_size(False)
-        table.set_fontsize(12)
-        table.scale(1, 2.3)
-
-        # Modern gradient colormap
-        from matplotlib.colors import LinearSegmentedColormap
-        cmap = LinearSegmentedColormap.from_list(
-            'modern_red', 
-            ['#1a0000', '#450a0a', '#991b1b', '#dc2626', '#f97316', '#fbbf24']
-        )
-
-        values = list(zones.values())
-        vmin, vmax = min(values), max(values)
-
-        # Apply styling to all cells
-        for (row, col), cell in table.get_celld().items():
-            cell.set_width(col_widths[col])
-            cell.set_edgecolor('white')
-            cell.set_linewidth(2)
-
-        # HEADER STYLING - Modern gradient
-        for i in range(2):
-            cell = table[(0, i)]
-            cell.set_facecolor('black')
-            cell.set_text_props(
-                color='white', 
-                weight='bold', 
-                fontsize=13,
-                family='sans-serif'
-            )
-            cell.set_linewidth(2.5)
-
-        # BODY CELLS - Glassmorphic with glow
-        for i, (zone, pct) in enumerate(zones.items(), start=1):
-            # Region column
-            cell = table[(i, 0)]
-            cell.set_facecolor('red')
-            cell.set_alpha(0.9)
-            cell.set_text_props(
-                color='white', 
-                weight='bold',
-                fontsize=11,
-                family='sans-serif'
-            )
-
-            # Percentage column - gradient based on value
-            cell = table[(i, 1)]
-            norm = (pct - vmin) / (vmax - vmin) if vmax > vmin else 0.5
-            cell.set_facecolor(cmap(norm))
-            cell.set_alpha(0.95)
-            cell.set_text_props(
-                color='white', 
-                weight='bold',
-                fontsize=12,
-                family='monospace'
-            )
-
-        plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
-        return fig, zones
-
+        
+        # Make legend text bold
+        for text in legend.get_texts():
+            text.set_weight('bold')
+        
+        plt.tight_layout()
+        
+        # Return overall zones for compatibility
+        return fig, all_zones['overall']
+        
     except Exception as e:
-        st.error(f"Error creating zone strength table: {e}")
+        st.error(f"Error creating zone strength visualization: {e}")
         return None, None
+
+
 
 
 def create_shot_profile_chart(
@@ -1430,7 +1458,7 @@ with tab1:
                 vals = []
                 for ln in sel_lens:
                     try:
-                        v = dict_360.get(selected_batter, {}).get(ln, {}).get(selected_bowl_kind, {}).get('360_score', 0)
+                        v = dict_360.get(selected_batter, {}).get(ln, {}).get(selected_bowl_kind, {}).get('overall').get('360_score', 0)
                     except Exception:
                         v = 0
                     vals.append(v)
