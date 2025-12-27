@@ -1017,11 +1017,11 @@ def create_zone_strength_table(dict_360, batter_name, selected_lengths, bowl_kin
                 )
                 
                 # Add percentage text if segment is large enough
-                if pct > 5:
+                if pct > 0:
                     ax.text(
                         left + pct/2,
                         y_positions[idx],
-                        f'{pct:.1f}%',
+                        f'{pct:.0f}',
                         ha='center',
                         va='center',
                         fontsize=15,  # Increased from 10
