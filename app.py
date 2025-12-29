@@ -1679,7 +1679,8 @@ with tab1:
                             'avg_runs'
                         )
                         if zone_fig:
-                            st.pyplot(zone_fig, use_container_width=True)    
+                            st.pyplot(zone_fig, use_container_width=True) 
+         
                     
                     st.markdown('<p class="section-header">Relative Shot Strengths</p>', unsafe_allow_html=True)
 
@@ -1723,7 +1724,7 @@ with tab1:
                             Understanding Zone and Shot Strengths
                         </h3>
                         <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem;">
-                            The table and chart show how the batter distributes their runs across four key regions and different shots.<strong> To understand the batter's true strength 
+                            The charts show how the batter distributes their runs across four key regions and different shots.<strong> To understand the batter's true strength 
                             in a particular region or playing a particular shot, we compare his distributions to an 
                             average batter's distributions </strong>. Average batter's calculations are done on the same 
                             line-length distribution the batter has faced in his career. The calculations consider run scoring
