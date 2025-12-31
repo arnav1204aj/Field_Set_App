@@ -1255,6 +1255,140 @@ def create_shot_profile_chart(
         st.error(f"Error creating shot profile: {e}")
         return None
 
+def get_top_similar_batters(
+    sim_matrices,
+    batter_name,
+    selected_lengths,
+    bowl_kind,
+    top_n=5
+):
+    """
+    Average similarities across selected lengths and return top-N batters.
+    """
+    # Normalize lengths
+    if isinstance(selected_lengths, (str, tuple)):
+        sel_lens = [selected_lengths] if isinstance(selected_lengths, str) else list(selected_lengths)
+    else:
+        sel_lens = list(selected_lengths)
+
+    sims_accum = {}
+
+    valid_count = 0
+    for ln in sel_lens:
+        key = (ln, bowl_kind)
+        if key not in sim_matrices:
+            continue
+
+        sim_df = sim_matrices[key]
+
+        if batter_name not in sim_df.index:
+            continue
+
+        row = sim_df.loc[batter_name]
+        valid_count += 1
+
+        for bat, val in row.items():
+            if bat == batter_name:
+                continue
+            sims_accum[bat] = sims_accum.get(bat, 0) + val
+
+    if valid_count == 0:
+        return None
+
+    # Average
+    avg_sims = {k: v / valid_count for k, v in sims_accum.items()}
+
+    out = (
+        pd.DataFrame(avg_sims.items(), columns=["batter", "similarity"])
+        .sort_values("similarity", ascending=False)
+        .head(top_n)
+        .reset_index(drop=True)
+    )
+
+    return out
+
+def create_similarity_chart(
+    sim_df,
+   
+    batter_name,
+    selected_lengths,
+    bowl_kind
+):
+    """
+    Horizontal similarity bar chart with player photos on Y-axis.
+    """
+    if sim_df is None or sim_df.empty:
+        return None
+
+    names = sim_df["batter"].tolist()
+    values = sim_df["similarity"].tolist()
+
+    fig, ax = plt.subplots(figsize=(9, 6))
+    fig.patch.set_alpha(0.0)
+    ax.set_facecolor('none')
+
+    from matplotlib.colors import LinearSegmentedColormap
+    cmap = LinearSegmentedColormap.from_list(
+        "sim_red",
+        ['#1a0000', '#450a0a', '#991b1b', '#dc2626', '#f97316', '#fde047'],
+        N=256
+    )
+
+    vmin, vmax = min(values), max(values)
+    y_pos = np.arange(len(names))
+
+    # Bars with glow
+    for y, val in zip(y_pos, values):
+        color = cmap((val - vmin) / (vmax - vmin + 1e-9))
+
+        for h, a in [(0.8, 0.15), (0.6, 0.2), (0.4, 0.25)]:
+            ax.barh(y, val, height=h, color=color, alpha=a)
+
+        ax.barh(y, val, height=0.6, color=color, edgecolor="white", linewidth=2)
+
+        ax.text(
+            val + 0.01,
+            y,
+            f"{val:.2f}",
+            va="center",
+            ha="left",
+            color="white",
+            fontweight="bold",
+            fontsize=10,
+            bbox=dict(
+                facecolor="#111",
+                edgecolor=color,
+                boxstyle="round,pad=0.3",
+                linewidth=2
+            )
+        )
+
+    # Player labels
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(names, color="white", fontsize=11, fontweight="bold")
+    ax.invert_yaxis()
+
+    ax.set_xlabel("Similarity Score", color="white", fontsize=12, fontweight="bold")
+    ax.set_title(
+        f"Most Similar Batters to {batter_name}\n"
+        f"{', '.join(map(str, selected_lengths))} • {bowl_kind}",
+        color="white",
+        fontsize=14,
+        fontweight="bold",
+        pad=20
+    )
+
+    ax.grid(axis="x", alpha=0.15)
+    ax.tick_params(colors="white")
+    ax.spines[['top','right']].set_visible(False)
+    ax.spines['left'].set_color('white')
+    ax.spines['bottom'].set_color('white')
+
+    ax.set_xlim(0, max(values) * 1.2)
+
+    plt.tight_layout()
+    return fig
+
     
 # ─────────────────────────────
 # Data loading
@@ -1292,6 +1426,7 @@ ev_dict = load_ev_dict('EVs.bin')
 dict_360 = load_ev_dict('bat_360.bin')
 shot_per = load_ev_dict('shot_percent.bin')
 avg_360 = load_ev_dict('bat_360_avg.bin')
+sim_matrices = load_ev_dict("sim_mat.bin")
 # Create a mapping of player names to image URLs
 player_images = dict(zip(players_df['fullname'], players_df['image_path']))
 
@@ -1551,10 +1686,10 @@ with tab1:
 
             st.markdown("---")
 
-
-                
+                        # ─────────────────────────────────────────────
+            # 🔍 SIMILAR BATTERS
+            # ─────────────────────────────────────────────
             
-
             # FIELD AND CONTRIBUTIONS
             col1, col2 = st.columns([1.6, 1.4])
 
@@ -1648,6 +1783,36 @@ with tab1:
                 st.markdown('</div>', unsafe_allow_html=True)
 
                     # After the Sector Importance section, add:
+            
+            st.markdown("---")
+
+            st.markdown('<p class="section-header">Similar Batters - A vector based sim. score considering shots, zones, control%, boundary% on different lines, lengths and bowler kinds</p>', unsafe_allow_html=True)
+
+            
+
+            sim_df = get_top_similar_batters(
+                sim_matrices=sim_matrices,
+                batter_name=selected_batter,
+                selected_lengths=selected_lengths,
+                bowl_kind=selected_bowl_kind,
+                top_n=5
+            )
+
+            if sim_df is None or sim_df.empty:
+                st.info("No similarity data available for this selection.")
+            else:
+                fig = create_similarity_chart(
+                    sim_df,
+                    
+                    selected_batter,
+                    selected_lengths,
+                    selected_bowl_kind
+                )
+
+                if fig:
+                    st.pyplot(fig)
+
+                
             
             st.markdown("---")
             
