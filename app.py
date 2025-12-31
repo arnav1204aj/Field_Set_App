@@ -295,6 +295,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+
+
 # ─────────────────────────────
 # Function to plot field with labels AND legend
 # ─────────────────────────────
@@ -1510,7 +1512,7 @@ with tab1:
 
 
     if submit:
-        try:
+        
             # Use length_key to fetch field setup from field_dict
             try:
                 data = field_dict[selected_batter][selected_bowl_kind][length_key][selected_outfielders]
@@ -1695,8 +1697,15 @@ with tab1:
 
             with col1:
                 st.markdown('<p class="section-header">Field Placement</p>', unsafe_allow_html=True)
-                fig, inf_labels, out_labels = plot_field_setting(data)
-                st.pyplot(fig, use_container_width=True)
+                
+                try:
+                    fig, inf_labels, out_labels = plot_field_setting(data)
+                
+                    st.pyplot(fig, use_container_width=True)
+                except Exception:
+                    st.warning('Unavailable')
+
+                
 
             with col2:
                 st.markdown('<p class="section-header">Fielder Contributions</p>', unsafe_allow_html=True)
@@ -1737,6 +1746,7 @@ with tab1:
                 plot_col, info_col = st.columns([1.6, 1.4])
                 
                 with plot_col:
+                   try: 
                     ev_fig = plot_sector_ev_heatmap(
                         ev_dict,
                         selected_batter,
@@ -1745,8 +1755,11 @@ with tab1:
                         LIMIT=350,
                         THIRTY_YARD_RADIUS_M=171.25 * 350 / 500
                     )
+
                     if ev_fig:
                         st.pyplot(ev_fig, use_container_width=True)
+                   except Exception:
+                    st.warning('Unavailable')     
                 
                 with info_col:
                     st.markdown("""
@@ -1801,6 +1814,7 @@ with tab1:
             if sim_df is None or sim_df.empty:
                 st.info("No similarity data available for this selection.")
             else:
+               try: 
                 fig = create_similarity_chart(
                     sim_df,
                     
@@ -1811,13 +1825,15 @@ with tab1:
 
                 if fig:
                     st.pyplot(fig)
-
+               except Exception:
+                    st.warning('Unavailable')
                 
             
             st.markdown("---")
             
             # RELATIVE ZONE STRENGTHS
             if dict_360 and selected_batter in dict_360:
+                  try:  
                     st.markdown('<p class="section-header">Relative Zone Strengths</p>', unsafe_allow_html=True)
 
                     reg_col, avg_col = st.columns([1.5, 1.5], gap="small")
@@ -1845,7 +1861,10 @@ with tab1:
                         )
                         if zone_fig:
                             st.pyplot(zone_fig, use_container_width=True) 
-         
+                  except Exception:
+                    st.warning('Unavailable')
+
+                  try:  
                     
                     st.markdown('<p class="section-header">Relative Shot Strengths</p>', unsafe_allow_html=True)
 
@@ -1874,9 +1893,10 @@ with tab1:
                             )
                             if shot_fig:
                                 st.pyplot(shot_fig, use_container_width=True)           
-
+                  except Exception:
+                    st.warning('Unavailable')
                     # -------- RIGHT: EXPLAINER --------
-                    
+                  try:  
                     st.markdown("""
                     <div style="
                         background: linear-gradient(135deg, rgba(153, 27, 27, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%);
@@ -1901,7 +1921,8 @@ with tab1:
                     
                     </div>
                     """, unsafe_allow_html=True)
-
+                  except Exception:
+                    st.warning('Unavailable')
 
 
             
@@ -1915,10 +1936,7 @@ with tab1:
         
             
 
-        except KeyError:
-            st.error("No data available for this combination.")
-        except Exception as e:
-            st.error(f"Unexpected error: {e}")
+        
     
     else:
         st.info("Please select parameters and click **Generate Results**")
