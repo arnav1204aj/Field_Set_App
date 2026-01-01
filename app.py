@@ -1461,14 +1461,14 @@ def plot_intrel_pitch(
         raise ValueError("No lengths with sufficient balls")
 
     colors_list = [
-        '#1a0000', '#450a0a', '#991b1b',
-        '#dc2626', '#f97316', '#fbbf24', '#fde047'
+    '#fde047', '#fbbf24', '#f97316',
+    '#dc2626', '#991b1b', '#450a0a', '#1a0000'
     ]
     modern_cmap = LinearSegmentedColormap.from_list(
         'modern_red', colors_list, N=256
     )
 
-    norm = Normalize(vmin=min(intrels), vmax=max(intrels))
+    norm = Normalize(vmin=0.5, vmax=1.5)
     mapper = ScalarMappable(norm=norm, cmap=modern_cmap)
     LENGTH_ZONES = {
     "FULL": (0.75, 0.90),
@@ -1598,6 +1598,7 @@ with tab1:
         
         with st.form(key='field_form'):
             submit = st.form_submit_button("Generate Results", use_container_width=True)
+            st.markdown('Suggestion: Avoid Short length for spinners, results might be weird due to sparsity.')
             # Batter selection
             batter_list = list(field_dict.keys())
             st.markdown('<p style="color: white; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem;">Select Batter</p>', unsafe_allow_html=True)
