@@ -1462,7 +1462,7 @@ def plot_intrel_pitch(
 
     colors_list = [
     '#fde047', '#fbbf24', '#f97316',
-    '#dc2626', '#991b1b', '#450a0a', '#1a0000'
+    '#dc2626', '#991b1b', '#450a0a'
     ]
     modern_cmap = LinearSegmentedColormap.from_list(
         'modern_red', colors_list, N=256
