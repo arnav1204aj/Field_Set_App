@@ -1937,8 +1937,8 @@ with tab1:
                     # After the Sector Importance section, add:
             
             st.markdown("---")
-            col1, col2 = st.columns([2, 1])
-            with col1:
+            col1, col2 = st.columns([1, 2])
+            with col2:
                 st.markdown('<p class="section-header">Similar Batters</p>', unsafe_allow_html=True)
 
                 
@@ -1967,7 +1967,7 @@ with tab1:
                             st.pyplot(fig)
                     except Exception:
                             st.warning('Unavailable')
-            with col2:
+            with col1:
                 st.markdown('<p class="section-header">Int-Con values by length</p>', unsafe_allow_html=True)
                 try:
                     fig = plot_intrel_pitch(intrel,selected_batter,selected_lengths,selected_bowl_kind,10)     
