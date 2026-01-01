@@ -5,6 +5,11 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import pickle
+import matplotlib.patches as patches
+
+from matplotlib.colors import Normalize
+from matplotlib.cm import ScalarMappable
+from matplotlib.colors import LinearSegmentedColormap
 
 # ─────────────────────────────
 # Custom CSS for RED premium design with RESPONSIVE elements
@@ -752,7 +757,7 @@ def plot_sector_ev_heatmap(
         ax.set_theta_direction(-1)
 
         # Modern red/orange gradient colormap
-        from matplotlib.colors import LinearSegmentedColormap
+        
         colors_list = ['#1a0000', '#450a0a', '#991b1b', '#dc2626', '#f97316', '#fbbf24', '#fde047']
         cmap = LinearSegmentedColormap.from_list('modern_red', colors_list, N=256)
 
@@ -1140,7 +1145,7 @@ def create_shot_profile_chart(
         ax.set_facecolor('none')
 
         # Modern gradient colormap
-        from matplotlib.colors import LinearSegmentedColormap
+        
         colors_list = ['#1a0000', '#450a0a', '#991b1b', '#dc2626', '#f97316', '#fbbf24', '#fde047']
         cmap = LinearSegmentedColormap.from_list('modern_red', colors_list, N=256)
 
@@ -1329,7 +1334,7 @@ def create_similarity_chart(
     fig.patch.set_alpha(0.0)
     ax.set_facecolor('none')
 
-    from matplotlib.colors import LinearSegmentedColormap
+    
     cmap = LinearSegmentedColormap.from_list(
         "sim_red",
         ['#1a0000', '#450a0a', '#991b1b', '#dc2626', '#f97316', '#fde047'],
@@ -1391,6 +1396,138 @@ def create_similarity_chart(
     plt.tight_layout()
     return fig
 
+
+
+def plot_intrel_pitch(
+    intrel_results,
+    batter,
+    lengths,
+    bowl_kind,
+    min_balls=10
+):
+    """
+    3D-perspective pitch showing intent-relative by length.
+    Returns matplotlib figure.
+    """
+    if bowl_kind=='pace bowler':
+        bowl_kind = 'pace'
+    else:
+        bowl_kind = 'spin'    
+    data = intrel_results.get(batter, {}).get(bowl_kind, {})
+    if not data:
+        raise ValueError(f"No data for {batter} ({bowl_kind})")
+
+    length_data = data["intrel_by_length"]
+
+    # --- figure ---
+    fig, ax = plt.subplots(figsize=(3, 4))
+    fig.patch.set_alpha(0)     # <-- IMPORTANT
+    ax.set_facecolor("none")  
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.axis("off")
+
+    # --- perspective transform (simple trapezoid pitch) ---
+    top_y = 0.90
+    bot_y = 0.05
+
+    pitch = np.array([
+        [0.20 + top_y * 0.15, top_y],
+        [0.80 - top_y * 0.15, top_y],
+        [0.80 - bot_y * 0.15, bot_y],
+        [0.20 + bot_y * 0.15, bot_y],
+    ])
+
+    ax.add_patch(
+        patches.Polygon(
+            pitch,
+            closed=True,
+            fill=False,
+            edgecolor="white",
+            linewidth=3.2,
+            alpha=0.95,
+            joinstyle="round"
+        )
+    )
+
+
+    # --- normalize int-rel for colors ---
+    intrels = [
+        v[0] for v in length_data.values()
+        if not np.isnan(v[0]) and v[1] >= min_balls
+    ]
+
+    if not intrels:
+        raise ValueError("No lengths with sufficient balls")
+
+    colors_list = [
+        '#1a0000', '#450a0a', '#991b1b',
+        '#dc2626', '#f97316', '#fbbf24', '#fde047'
+    ]
+    modern_cmap = LinearSegmentedColormap.from_list(
+        'modern_red', colors_list, N=256
+    )
+
+    norm = Normalize(vmin=min(intrels), vmax=max(intrels))
+    mapper = ScalarMappable(norm=norm, cmap=modern_cmap)
+    LENGTH_ZONES = {
+    "FULL": (0.75, 0.90),
+    "GOOD_LENGTH": (0.50, 0.75),
+    "SHORT_OF_A_GOOD_LENGTH": (0.30, 0.50),
+    "SHORT": (0.05, 0.30)
+    }
+    
+    # --- draw length bands ---
+    for length, (y0, y1) in LENGTH_ZONES.items():
+        if length not in lengths:
+         continue 
+        intrel, balls = length_data.get(length, (np.nan, 0))
+        if balls < min_balls or np.isnan(intrel):
+            continue
+
+        color = mapper.to_rgba(intrel)
+
+        # trapezoidal band (perspective scaling)
+        band = np.array([
+            [0.20 + y0 * 0.15, y0],
+            [0.80 - y0 * 0.15, y0],
+            [0.80 - y1 * 0.15, y1],
+            [0.20 + y1 * 0.15, y1],
+        ])
+
+        ax.add_patch(
+            patches.Polygon(
+                band,
+                closed=True,
+                facecolor=color,
+                edgecolor="white",
+                linewidth=2,
+                alpha=0.65
+            )
+        )
+
+        # label
+        ax.text(
+            0.5,
+            (y0 + y1) / 2,
+            f"{length.replace('_', ' ')}\n{intrel:.2f}",
+            color="white",
+            fontsize=5,
+            ha="center",
+            va="center",
+            fontweight="bold"
+        )
+
+    
+    stump_x = [0.48, 0.50, 0.52]
+    for x in stump_x:
+        ax.plot([x, x], [0.9, 0.95], color="white", linewidth=3)
+    
+    # --- title ---
+   
+
+    return fig
+
     
 # ─────────────────────────────
 # Data loading
@@ -1428,6 +1565,7 @@ ev_dict = load_ev_dict('EVs.bin')
 dict_360 = load_ev_dict('bat_360.bin')
 shot_per = load_ev_dict('shot_percent.bin')
 avg_360 = load_ev_dict('bat_360_avg.bin')
+intrel = load_ev_dict('intrel.bin')
 sim_matrices = load_ev_dict("sim_mat.bin")
 # Create a mapping of player names to image URLs
 player_images = dict(zip(players_df['fullname'], players_df['image_path']))
@@ -1512,6 +1650,7 @@ with tab1:
 
 
     if submit:
+            
         
             # Use length_key to fetch field setup from field_dict
             try:
@@ -1798,37 +1937,68 @@ with tab1:
                     # After the Sector Importance section, add:
             
             st.markdown("---")
+            col1, col2 = st.columns([2, 1])
+            with col1:
+                st.markdown('<p class="section-header">Similar Batters</p>', unsafe_allow_html=True)
 
-            st.markdown('<p class="section-header">Similar Batters - A vector based sim. score considering shots, zones, control%, boundary% on different lines, lengths and bowler kinds</p>', unsafe_allow_html=True)
+                
 
-            
-
-            sim_df = get_top_similar_batters(
-                sim_matrices=sim_matrices,
-                batter_name=selected_batter,
-                selected_lengths=selected_lengths,
-                bowl_kind=selected_bowl_kind,
-                top_n=5
-            )
-
-            if sim_df is None or sim_df.empty:
-                st.info("No similarity data available for this selection.")
-            else:
-               try: 
-                fig = create_similarity_chart(
-                    sim_df,
-                    
-                    selected_batter,
-                    selected_lengths,
-                    selected_bowl_kind
+                sim_df = get_top_similar_batters(
+                    sim_matrices=sim_matrices,
+                    batter_name=selected_batter,
+                    selected_lengths=selected_lengths,
+                    bowl_kind=selected_bowl_kind,
+                    top_n=5
                 )
 
-                if fig:
+                if sim_df is None or sim_df.empty:
+                    st.info("No similarity data available for this selection.")
+                else:
+                    try: 
+                        fig = create_similarity_chart(
+                            sim_df,
+                            
+                            selected_batter,
+                            selected_lengths,
+                            selected_bowl_kind
+                        )
+
+                        if fig:
+                            st.pyplot(fig)
+                    except Exception:
+                            st.warning('Unavailable')
+            with col2:
+                st.markdown('<p class="section-header">Int-Con values by length</p>', unsafe_allow_html=True)
+                try:
+                    fig = plot_intrel_pitch(intrel,selected_batter,selected_lengths,selected_bowl_kind,10)     
                     st.pyplot(fig)
-               except Exception:
-                    st.warning('Unavailable')
+                except Exception:
+                            st.warning('Unavailable') 
+            st.markdown("""
+                    <div style="
+                        background: linear-gradient(135deg, rgba(153, 27, 27, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%);
+                        padding: 1.5rem;
+                        border-radius: 12px;
+                        border: 1px solid rgba(220,38,38,0.3);
+                        height: 100%;
+                    ">
+                        <h3 style="color: #fca5a5; font-size: 1.2rem; font-weight: 700; margin-top: 0;">
+                            Understanding Batter Similarity and Int-Con Values
+                        </h3>
+                        <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem;">
+                            Batter Similarity a vector based similarity score considering shots, 
+                            zones, control%, boundary% on different lines, lengths and bowler kinds.
+                        </p>
+                                <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem;">
+                            Int-Con is an intent-control measuring metric. It is a multiplication of SRs and Control%
+                            the batter achieves compared to other batters in the same innings. So a value of 1.20 for example means
+                            the batter was 20% better, 0.8 means 20% worse, 1 is average performance.
+                        </p>
+                    
+                    </div>
+                    """, unsafe_allow_html=True)
                 
-            
+
             st.markdown("---")
             
             # RELATIVE ZONE STRENGTHS
