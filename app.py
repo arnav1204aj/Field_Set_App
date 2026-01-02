@@ -1521,7 +1521,7 @@ def plot_intrel_pitch(
     
     stump_x = [0.48, 0.50, 0.52]
     for x in stump_x:
-        ax.plot([x, x], [0.9, 0.95], color="white", linewidth=3)
+        ax.plot([x, x], [0.9, 0.975], color="white", linewidth=3)
     
     # --- title ---
    
