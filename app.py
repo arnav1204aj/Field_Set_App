@@ -1971,7 +1971,7 @@ with tab1:
             with col1:
                 st.markdown('<p class="section-header">Int-Con values by length</p>', unsafe_allow_html=True)
                 try:
-                    fig = plot_intrel_pitch(intrel,selected_batter,selected_lengths,selected_bowl_kind,10)     
+                    fig = plot_intrel_pitch(intrel,selected_batter,selected_lengths,selected_bowl_kind,5)     
                     st.pyplot(fig)
                 except Exception:
                             st.warning('Unavailable') 
@@ -1988,7 +1988,7 @@ with tab1:
                         </h3>
                         <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem;">
                             Batter Similarity a vector based similarity score considering shots, 
-                            zones, control%, boundary% on different lines, lengths and bowler kinds.
+                            zones, control%, boundary%, dot%, running%, average on different lines, lengths and bowler kinds.
                         </p>
                                 <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem;">
                             Int-Con is an intent-control measuring metric. It is a multiplication of SRs and Control%
