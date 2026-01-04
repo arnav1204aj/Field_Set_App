@@ -162,7 +162,7 @@ st.markdown("""
     .contribution-title {
         font-size: clamp(0.75rem, 1.5vw, 0.85rem);
         font-weight: 700;
-        color: #fca5a5;
+        color: white;
         text-transform: uppercase;
         letter-spacing: 0.8px;
         margin-bottom: 0.8rem;
@@ -1735,6 +1735,76 @@ with tab1:
                 vals = []
                 for ln in sel_lens:
                     try:
+                        v = dict_360.get(selected_batter, {}).get(ln, {}).get(selected_bowl_kind, {}).get('running').get('360_score', 0)
+                    except Exception:
+                        v = 0
+                    vals.append(v)
+                batter_360 = sum(vals) / len(sel_lens)
+
+                vals = []
+                for ln in sel_lens:
+                    try:
+                        v = avg_360.get('A', {}).get(ln, {}).get(selected_bowl_kind, {}).get('running').get('360_score', 0)
+                    except Exception:
+                        v = 0
+                    vals.append(v)
+                global_360 = sum(vals) / len(sel_lens)
+
+                with col1:
+                    st.metric(
+                        "BATTER 360 SCORE (RUNNING)",
+                        f"{batter_360:.1f}",
+                        delta=f"{batter_360 - global_360:.1f}"
+                    )
+
+                with col2:
+                    st.metric(
+                        "GLOBAL AVG (RUNNING 360)",
+                        f"{global_360:.1f}"
+                    )
+                
+                col1, col2 = st.columns(2)
+
+                # Average 360 score across selected lengths (missing treated as 0)
+                sel_lens = selected_lengths if isinstance(selected_lengths, list) else [selected_lengths]
+                vals = []
+                for ln in sel_lens:
+                    try:
+                        v = dict_360.get(selected_batter, {}).get(ln, {}).get(selected_bowl_kind, {}).get('boundary').get('360_score', 0)
+                    except Exception:
+                        v = 0
+                    vals.append(v)
+                batter_360 = sum(vals) / len(sel_lens)
+
+                vals = []
+                for ln in sel_lens:
+                    try:
+                        v = avg_360.get('A', {}).get(ln, {}).get(selected_bowl_kind, {}).get('boundary').get('360_score', 0)
+                    except Exception:
+                        v = 0
+                    vals.append(v)
+                global_360 = sum(vals) / len(sel_lens)
+
+                with col1:
+                    st.metric(
+                        "BATTER 360 SCORE (BOUNDARY)",
+                        f"{batter_360:.1f}",
+                        delta=f"{batter_360 - global_360:.1f}"
+                    )
+
+                with col2:
+                    st.metric(
+                        "GLOBAL AVG (BOUNDARY 360)",
+                        f"{global_360:.1f}"
+                    )
+
+                col1, col2 = st.columns(2)
+
+                # Average 360 score across selected lengths (missing treated as 0)
+                sel_lens = selected_lengths if isinstance(selected_lengths, list) else [selected_lengths]
+                vals = []
+                for ln in sel_lens:
+                    try:
                         v = dict_360.get(selected_batter, {}).get(ln, {}).get(selected_bowl_kind, {}).get('overall').get('360_score', 0)
                     except Exception:
                         v = 0
@@ -1744,7 +1814,7 @@ with tab1:
                 vals = []
                 for ln in sel_lens:
                     try:
-                        v = avg_360.get('A', {}).get(ln, {}).get(selected_bowl_kind, {}).get('360_score', 0)
+                        v = avg_360.get('A', {}).get(ln, {}).get(selected_bowl_kind, {}).get('overall').get('360_score', 0)
                     except Exception:
                         v = 0
                     vals.append(v)
@@ -1752,20 +1822,44 @@ with tab1:
 
                 with col1:
                     st.metric(
-                        "BATTER 360 SCORE",
+                        "BATTER 360 SCORE (OVERALL)",
                         f"{batter_360:.1f}",
                         delta=f"{batter_360 - global_360:.1f}"
                     )
 
                 with col2:
                     st.metric(
-                        "GLOBAL AVG (360)",
+                        "GLOBAL AVG (OVERALL 360)",
                         f"{global_360:.1f}"
-                    )
-
+                    )    
                 # ─────────────────────────────────────────────
                 # 🏃 ROW 2 : RUNNING PROTECTION (Lower = Better)
                 # ─────────────────────────────────────────────
+                
+
+            st.markdown("---")
+
+                        # ─────────────────────────────────────────────
+            # 🔍 SIMILAR BATTERS
+            # ─────────────────────────────────────────────
+            
+            # FIELD AND CONTRIBUTIONS
+            col1, col2 = st.columns([1.6, 1.4])
+
+            with col1:
+                st.markdown('<p class="section-header">Optimal Field Placement</p>', unsafe_allow_html=True)
+                
+                try:
+                    fig, inf_labels, out_labels = plot_field_setting(data)
+                
+                    st.pyplot(fig, use_container_width=True)
+                except Exception:
+                    st.warning('Unavailable')
+
+                
+
+            with col2:
+                st.markdown('<p class="section-header">Protection Stats and Fielder Contributions</p>', unsafe_allow_html=True)
                 col3, col4 = st.columns(2)
 
                 batter_run = stats.get('running', 0)
@@ -1825,30 +1919,6 @@ with tab1:
                         "GLOBAL AVG (BD. PROT.)",
                         f"{global_bd:.1f}%"
                     )
-
-            st.markdown("---")
-
-                        # ─────────────────────────────────────────────
-            # 🔍 SIMILAR BATTERS
-            # ─────────────────────────────────────────────
-            
-            # FIELD AND CONTRIBUTIONS
-            col1, col2 = st.columns([1.6, 1.4])
-
-            with col1:
-                st.markdown('<p class="section-header">Field Placement</p>', unsafe_allow_html=True)
-                
-                try:
-                    fig, inf_labels, out_labels = plot_field_setting(data)
-                
-                    st.pyplot(fig, use_container_width=True)
-                except Exception:
-                    st.warning('Unavailable')
-
-                
-
-            with col2:
-                st.markdown('<p class="section-header">Fielder Contributions</p>', unsafe_allow_html=True)
                 
                 inf_contrib = data.get('infielder_ev_run_percent', [])
                 out_contrib = data.get('outfielder_ev_bd_percent', [])
