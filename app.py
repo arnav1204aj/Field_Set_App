@@ -1600,7 +1600,7 @@ with tab1:
             submit = st.form_submit_button("Generate Results", use_container_width=True)
             st.markdown('Suggestion: Avoid Short length for spinners, results might be weird due to sparsity.')
             # Batter selection
-            batter_list = list(field_dict.keys())
+            batter_list = list(ev_dict.keys())
             st.markdown('<p style="color: white; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem;">Select Batter</p>', unsafe_allow_html=True)
             selected_batter = st.selectbox("Select Batter", batter_list, label_visibility="collapsed", key="batter")
 
