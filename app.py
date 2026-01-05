@@ -716,30 +716,39 @@ def plot_sector_ev_heatmap(
             return None
 
         all_theta = sorted(all_theta)
-
+        theta_centers = np.array(all_theta)
         # Build aggregated arrays (average across lengths; missing treated as zero)
         agg_ev_run = []
         agg_ev_bd = []
-        theta_centers = np.array(all_theta)
 
         for theta in theta_centers:
-            run_vals = []
-            bd_vals = []
+            run_num = 0.0
+            bd_num = 0.0
+            denom = 0.0
+
             for ln in sel_lens:
+                balls = length_dict.get(batter_name, {}) \
+                                    .get(bowl_kind, {}) \
+                                    .get(ln, 0)
+
+                if balls == 0:
+                    continue
+
                 df = per_len_dfs.get(ln)
                 if df is None:
-                    run_vals.append(0.0)
-                    bd_vals.append(0.0)
-                else:
-                    row = df.loc[df['theta_center_deg'] % 360 == theta]
-                    if row.empty:
-                        run_vals.append(0.0)
-                        bd_vals.append(0.0)
-                    else:
-                        run_vals.append(float(row['ev_run'].values[0]))
-                        bd_vals.append(float(row['ev_bd'].values[0]))
-            agg_ev_run.append(sum(run_vals) / n_lens)
-            agg_ev_bd.append(sum(bd_vals) / n_lens)
+                    continue
+
+                row = df.loc[df['theta_center_deg'] % 360 == theta]
+                if row.empty:
+                    continue
+
+                run_num += float(row['ev_run'].values[0]) * balls
+                bd_num += float(row['ev_bd'].values[0]) * balls
+                denom += balls
+
+            agg_ev_run.append(run_num / denom if denom > 0 else 0.0)
+            agg_ev_bd.append(bd_num / denom if denom > 0 else 0.0)
+
         ev_run = np.array(agg_ev_run)
         ev_bd = np.array(agg_ev_bd)
 
@@ -963,9 +972,25 @@ def create_zone_strength_table(dict_360, batter_name, selected_lengths, bowl_kin
             
             # Build averaged data
             for key in keys_union:
-                vals = [per_len_data[ln].get(key, 0.0) if per_len_data[ln] else 0.0 
-                       for ln in sel_lens]
-                aggregated[rc][key] = sum(vals) / len(sel_lens)
+                num = 0.0
+                denom = 0.0
+
+                for ln in sel_lens:
+                    balls = length_dict.get(batter_name, {}) \
+                                        .get(bowl_kind, {}) \
+                                        .get(ln, 0)
+
+                    if balls == 0:
+                        continue
+
+                    per = per_len_data.get(ln)
+                    val = per.get(key, 0.0) if per else 0.0
+
+                    num += val * balls
+                    denom += balls
+
+                aggregated[rc][key] = num / denom if denom > 0 else 0.0
+
 
         # Calculate zone percentages for each run class
         all_zones = {}
@@ -1118,13 +1143,27 @@ def create_shot_profile_chart(
             shots_set.update([s for s, v in (per or {}).items() if isinstance(v, dict)])
 
         shots = {}
+
         for shot in shots_set:
-            vals = []
+            num = 0.0
+            denom = 0.0
+
             for ln in sel_lens:
+                balls = length_dict.get(batter_name, {}) \
+                                    .get(bowl_kind, {}) \
+                                    .get(ln, 0)
+
+                if balls == 0:
+                    continue
+
                 per = per_len_shots.get(ln) or {}
-                v = per.get(shot, {}).get(value_type, 0)
-                vals.append(v)
-            shots[shot] = sum(vals) / len(sel_lens)
+                val = per.get(shot, {}).get(value_type, 0)
+
+                num += val * balls
+                denom += balls
+
+            shots[shot] = num / denom if denom > 0 else 0.0
+
 
         if not shots:
             return None
@@ -1564,6 +1603,7 @@ players_df = load_players_data('players.csv')
 ev_dict = load_ev_dict('EVs.bin')
 dict_360 = load_ev_dict('bat_360.bin')
 shot_per = load_ev_dict('shot_percent.bin')
+length_dict = load_ev_dict('length_dict.bin')
 avg_360 = load_ev_dict('bat_360_avg.bin')
 intrel = load_ev_dict('intrel.bin')
 sim_matrices = load_ev_dict("sim_mat.bin")
