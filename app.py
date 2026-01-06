@@ -2244,7 +2244,7 @@ with tab1:
             col1,col2,col3, col4 = st.columns([1, 1, 1, 1])
             with col4:
                 try:
-                        fig = plot_intrel_pitch_avg(intrel,selected_batter,selected_lengths,selected_bowl_kind,5)     
+                        fig = plot_intrel_pitch_avg(intrel,selected_batter,selected_lengths,selected_bowl_kind,0)     
                         st.pyplot(fig)
                 except Exception:
                                 st.warning('Unavailable')
@@ -2252,21 +2252,21 @@ with tab1:
             with col3:
                 
                 try:
-                        fig = plot_intrel_pitch('intrel_by_length','Int-Rel',intrel,selected_batter,selected_lengths,selected_bowl_kind,5)     
+                        fig = plot_intrel_pitch('intrel_by_length','Int-Rel',intrel,selected_batter,selected_lengths,selected_bowl_kind,0)     
                         st.pyplot(fig)
                 except Exception:
                                 st.warning('Unavailable')
             with col2:
                 
                 try:
-                        fig = plot_intrel_pitch('reliability_by_length','Reliability',intrel,selected_batter,selected_lengths,selected_bowl_kind,5)     
+                        fig = plot_intrel_pitch('reliability_by_length','Reliability',intrel,selected_batter,selected_lengths,selected_bowl_kind,0)     
                         st.pyplot(fig)
                 except Exception:
                                 st.warning('Unavailable')
             with col1:
                 
                 try:
-                        fig = plot_intrel_pitch('intent_by_length','Intent',intrel,selected_batter,selected_lengths,selected_bowl_kind,5)     
+                        fig = plot_intrel_pitch('intent_by_length','Intent',intrel,selected_batter,selected_lengths,selected_bowl_kind,0)     
                         st.pyplot(fig)
                 except Exception:
                                 st.warning('Unavailable') 
