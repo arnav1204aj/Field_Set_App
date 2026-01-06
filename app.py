@@ -1438,6 +1438,8 @@ def create_similarity_chart(
 
 
 def plot_intrel_pitch(
+    metric,
+    heading,    
     intrel_results,
     batter,
     lengths,
@@ -1456,7 +1458,7 @@ def plot_intrel_pitch(
     if not data:
         raise ValueError(f"No data for {batter} ({bowl_kind})")
 
-    length_data = data["intrel_by_length"]
+    length_data = data[metric]
 
     # --- figure ---
     fig, ax = plt.subplots(figsize=(3, 4))
@@ -1563,7 +1565,15 @@ def plot_intrel_pitch(
         ax.plot([x, x], [0.9, 0.975], color="white", linewidth=3)
     
     # --- title ---
-   
+    fig.text(
+    0.5, 0.92,
+    heading,
+    ha="center",
+    va="top",
+    fontsize=8,
+    fontweight="bold",
+    color="white"
+    )
 
     return fig
 
@@ -2048,9 +2058,10 @@ with tab1:
                     # After the Sector Importance section, add:
             
             st.markdown("---")
-            col1, col2 = st.columns([1, 2])
-            with col2:
-                st.markdown('<p class="section-header">Similar Batters</p>', unsafe_allow_html=True)
+            st.markdown('<p class="section-header">Similar Batters</p>', unsafe_allow_html=True)
+            col1, col2 = st.columns([2, 1])
+            with col1:
+                
 
                 
 
@@ -2078,13 +2089,54 @@ with tab1:
                             st.pyplot(fig)
                     except Exception:
                             st.warning('Unavailable')
-            with col1:
-                st.markdown('<p class="section-header">Int-Con values by length</p>', unsafe_allow_html=True)
+            with col2:
+                
+                st.markdown("""
+                    <div style="
+                        background: linear-gradient(135deg, rgba(153, 27, 27, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%);
+                        padding: 1.5rem;
+                        border-radius: 12px;
+                        border: 1px solid rgba(220,38,38,0.3);
+                        height: 100%;
+                    ">
+                        <h3 style="color: #fca5a5; font-size: 1.2rem; font-weight: 700; margin-top: 0;">
+                            Understanding Batter Similarity
+                        </h3>
+                        <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem;">
+                            Batter Similarity a vector based similarity score considering shots, 
+                            zones, control%, boundary%, dot%, running%, average on different lines, lengths and bowler kinds.
+                       
+                    
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+
+            st.markdown("---")
+            st.markdown('<p class="section-header">Intent, Reliability, Int-Rel by length</p>', unsafe_allow_html=True)
+            col1,col2,col3 = st.columns([1, 1, 1])
+            
+            with col3:
+                
                 try:
-                    fig = plot_intrel_pitch(intrel,selected_batter,selected_lengths,selected_bowl_kind,5)     
-                    st.pyplot(fig)
+                        fig = plot_intrel_pitch('intrel_by_length','Int-Rel',intrel,selected_batter,selected_lengths,selected_bowl_kind,5)     
+                        st.pyplot(fig)
                 except Exception:
-                            st.warning('Unavailable') 
+                                st.warning('Unavailable')
+            with col2:
+                
+                try:
+                        fig = plot_intrel_pitch('reliability_by_length','Reliability',intrel,selected_batter,selected_lengths,selected_bowl_kind,5)     
+                        st.pyplot(fig)
+                except Exception:
+                                st.warning('Unavailable')
+            with col1:
+                
+                try:
+                        fig = plot_intrel_pitch('intent_by_length','Intent',intrel,selected_batter,selected_lengths,selected_bowl_kind,5)     
+                        st.pyplot(fig)
+                except Exception:
+                                st.warning('Unavailable') 
+            
             st.markdown("""
                     <div style="
                         background: linear-gradient(135deg, rgba(153, 27, 27, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%);
@@ -2094,24 +2146,18 @@ with tab1:
                         height: 100%;
                     ">
                         <h3 style="color: #fca5a5; font-size: 1.2rem; font-weight: 700; margin-top: 0;">
-                            Understanding Batter Similarity and Int-Con Values
+                            Understanding Intent, Reliability, Int-Rel
                         </h3>
                         <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem;">
-                            Batter Similarity a vector based similarity score considering shots, 
-                            zones, control%, boundary%, dot%, running%, average on different lines, lengths and bowler kinds.
-                        </p>
-                                <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem;">
-                            Int-Con is an intent-control measuring metric. It is a multiplication of SRs and Control%
-                            the batter achieves compared to other batters in the same innings. So a value of 1.20 for example means
-                            the batter was 20% better, 0.8 means 20% worse, 1 is average performance.
+                            Int-Rel is an intent-reliability measuring metric. It is a multiplication of SRs (Intent) and Control% (Reliability)
+                            the batter achieves compared to other batters in the same innings. Keeping in mind the nature of T20s,
+                            Intent is given a 2x weight during multiplication. So for all Intent, Reliability and Int-Rel, a value of 1.20 for example means
+                            the batter was 20% better, 0.8 means 20% worse, 1 is average performance. 
                         </p>
                     
                     </div>
                     """, unsafe_allow_html=True)
-                
-
-            st.markdown("---")
-            
+            st.markdown("---")                                                            
             # RELATIVE ZONE STRENGTHS
             if dict_360 and selected_batter in dict_360:
                   try:  
