@@ -1461,7 +1461,7 @@ def plot_intrel_pitch(
     length_data = data[metric]
 
     # --- figure ---
-    fig, ax = plt.subplots(figsize=(3, 4))
+    fig, ax = plt.subplots(figsize=(4.5, 6))
     fig.patch.set_alpha(0)     # <-- IMPORTANT
     ax.set_facecolor("none")  
     ax.set_xlim(0, 1)
@@ -1553,7 +1553,7 @@ def plot_intrel_pitch(
             (y0 + y1) / 2,
             f"{length.replace('_', ' ')}\n{intrel:.2f}",
             color="white",
-            fontsize=5,
+            fontsize=8,
             ha="center",
             va="center",
             fontweight="bold"
@@ -1570,9 +1570,137 @@ def plot_intrel_pitch(
     heading,
     ha="center",
     va="top",
-    fontsize=8,
+    fontsize=12,
     fontweight="bold",
     color="white"
+    )
+
+    return fig
+
+def plot_intrel_pitch_avg(
+    intrel_results,
+    batter,
+    lengths,
+    bowl_kind,
+    min_balls=10
+):
+    """
+    3D-perspective pitch showing Avg Bat (SR, Control%) by length.
+    Neutral alternating colors (blue/green), no color grading.
+    Returns matplotlib figure.
+    """
+
+    if bowl_kind == 'pace bowler':
+        bowl_kind = 'pace'
+    else:
+        bowl_kind = 'spin'
+
+    data = intrel_results.get(batter, {}).get(bowl_kind, {})
+    if not data:
+        raise ValueError(f"No data for {batter} ({bowl_kind})")
+
+    sr_data = data.get("othsr", {})
+    con_data = data.get("othcon", {})
+
+    # --- figure ---
+    fig, ax = plt.subplots(figsize=(4.5, 6))
+    fig.patch.set_alpha(0)
+    ax.set_facecolor("none")
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.axis("off")
+
+    # --- perspective pitch ---
+    top_y = 0.90
+    bot_y = 0.05
+
+    pitch = np.array([
+        [0.20 + top_y * 0.15, top_y],
+        [0.80 - top_y * 0.15, top_y],
+        [0.80 - bot_y * 0.15, bot_y],
+        [0.20 + bot_y * 0.15, bot_y],
+    ])
+
+    ax.add_patch(
+        patches.Polygon(
+            pitch,
+            closed=True,
+            fill=False,
+            edgecolor="white",
+            linewidth=3.2,
+            alpha=0.95,
+            joinstyle="round"
+        )
+    )
+
+    LENGTH_ZONES = {
+        "FULL": (0.75, 0.90),
+        "GOOD_LENGTH": (0.50, 0.75),
+        "SHORT_OF_A_GOOD_LENGTH": (0.30, 0.50),
+        "SHORT": (0.05, 0.30)
+    }
+
+    # alternating neutral colors
+    colors = ["#2563eb", "#16a34a"]  # blue, green
+
+    # --- draw bands ---
+    color_idx = 0
+    for length, (y0, y1) in LENGTH_ZONES.items():
+        if length not in lengths:
+            continue
+
+        sr, balls_sr = sr_data.get(length, (np.nan, 0))
+        con, balls_con = con_data.get(length, (np.nan, 0))
+
+        balls = min(balls_sr, balls_con)
+        if balls < min_balls or np.isnan(sr) or np.isnan(con):
+            continue
+
+        color = colors[color_idx % 2]
+        color_idx += 1
+
+        band = np.array([
+            [0.20 + y0 * 0.15, y0],
+            [0.80 - y0 * 0.15, y0],
+            [0.80 - y1 * 0.15, y1],
+            [0.20 + y1 * 0.15, y1],
+        ])
+
+        ax.add_patch(
+            patches.Polygon(
+                band,
+                closed=True,
+                facecolor=color,
+                edgecolor="white",
+                linewidth=2,
+                alpha=0.65
+            )
+        )
+
+        ax.text(
+            0.5,
+            (y0 + y1) / 2,
+            f"{length.replace('_', ' ')}\n{sr:.0f}, {con:.0f}%",
+            color="white",
+            fontsize=8,
+            ha="center",
+            va="center",
+            fontweight="bold"
+        )
+
+    # --- stumps ---
+    for x in [0.48, 0.50, 0.52]:
+        ax.plot([x, x], [0.9, 0.975], color="white", linewidth=3)
+
+    # --- heading ---
+    fig.text(
+        0.5, 0.92,
+        "Avg Bat (SR, Control%)",
+        ha="center",
+        va="top",
+        fontsize=12,
+        fontweight="bold",
+        color="white"
     )
 
     return fig
@@ -2113,7 +2241,13 @@ with tab1:
 
             st.markdown("---")
             st.markdown('<p class="section-header">Intent, Reliability, Int-Rel by length</p>', unsafe_allow_html=True)
-            col1,col2,col3 = st.columns([1, 1, 1])
+            col1,col2,col3, col4 = st.columns([1, 1, 1, 1])
+            with col4:
+                try:
+                        fig = plot_intrel_pitch_avg(intrel,selected_batter,selected_lengths,selected_bowl_kind,5)     
+                        st.pyplot(fig)
+                except Exception:
+                                st.warning('Unavailable')
             
             with col3:
                 
@@ -2152,7 +2286,8 @@ with tab1:
                             Int-Rel is an intent-reliability measuring metric. It is a multiplication of SRs (Intent) and Control% (Reliability)
                             the batter achieves compared to other batters in the same innings. Keeping in mind the nature of T20s,
                             Intent is given a 2x weight during multiplication. So for all Intent, Reliability and Int-Rel, a value of 1.20 for example means
-                            the batter was 20% better, 0.8 means 20% worse, 1 is average performance. 
+                            the batter was 20% better, 0.8 means 20% worse, 1 is average performance. For reference, numbers of an average batter playing 
+                            in same conditions as the batter are provided.
                         </p>
                     
                     </div>
