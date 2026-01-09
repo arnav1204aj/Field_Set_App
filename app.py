@@ -1707,7 +1707,7 @@ def plot_intrel_pitch_avg(
 
     
 # ─────────────────────────────
-# Data loading
+# Data loading with Women's Mode Support
 # ─────────────────────────────
 @st.cache_data
 def load_field_dict(path):
@@ -1716,8 +1716,6 @@ def load_field_dict(path):
             return pickle.load(f)
     except FileNotFoundError:
         return {}
-@st.cache_data
- 
 
 @st.cache_data
 def load_players_data(path):
@@ -1732,25 +1730,115 @@ def load_ev_dict(path):
         with open(path, 'rb') as f:
             return pickle.load(f)
     except FileNotFoundError:
-        st.warning("EVs.bin file not found. Sector importance plot will not be available.")
         return {}
 
 
-field_dict_t20 = load_field_dict('field_dict_global.bin')
-players_df = load_players_data('players.csv')
-ev_dict = load_ev_dict('EVs.bin')
-dict_360 = load_ev_dict('bat_360.bin')
-shot_per = load_ev_dict('shot_percent.bin')
-length_dict = load_ev_dict('length_dict.bin')
-avg_360 = load_ev_dict('bat_360_avg.bin')
-intrel = load_ev_dict('intrel.bin')
-sim_matrices = load_ev_dict("sim_mat.bin")
+# Initialize session state for efficient data switching
+if 'is_womens_mode' not in st.session_state:
+    st.session_state['is_womens_mode'] = False
+
+if 'loaded_data' not in st.session_state:
+    st.session_state['loaded_data'] = {}
+
+def get_data_paths(is_womens):
+    """
+    Returns dict of all data file paths based on mode (mens/womens).
+    Efficient: avoids redundant path construction.
+    """
+    prefix = 'w' if is_womens else ''
+    return {
+        'field_dict': f'{prefix}field_dict_global.bin',
+        'ev': f'{prefix}EVs.bin',
+        'dict_360': f'{prefix}bat_360.bin',
+        'shot_per': f'{prefix}shot_percent.bin',
+        'length_dict': f'{prefix}length_dict.bin',
+        'avg_360': f'{prefix}bat_360_avg.bin',
+        'intrel': f'{prefix}intrel.bin',
+        'sim_matrices': f'{prefix}sim_mat.bin',
+        'players': 'players.csv'  # Same for both modes
+    }
+
+def load_all_data(is_womens):
+    """
+    Load all data files for the selected mode (mens/womens).
+    Uses session state caching to avoid redundant file I/O on each toggle.
+    """
+    mode_key = 'womens' if is_womens else 'mens'
+    
+    # Return cached data if already loaded for this mode
+    if mode_key in st.session_state['loaded_data']:
+        return st.session_state['loaded_data'][mode_key]
+    
+    paths = get_data_paths(is_womens)
+    
+    # Load all data files
+    data = {
+        'field_dict': load_field_dict(paths['field_dict']),
+        'players_df': load_players_data(paths['players']),
+        'ev_dict': load_ev_dict(paths['ev']),
+        'dict_360': load_ev_dict(paths['dict_360']),
+        'shot_per': load_ev_dict(paths['shot_per']),
+        'length_dict': load_ev_dict(paths['length_dict']),
+        'avg_360': load_ev_dict(paths['avg_360']),
+        'intrel': load_ev_dict(paths['intrel']),
+        'sim_matrices': load_ev_dict(paths['sim_matrices']),
+    }
+    
+    # Cache the loaded data in session state for fast switching
+    st.session_state['loaded_data'][mode_key] = data
+    return data
+
+# Load initial mens data
+initial_data = load_all_data(is_womens=False)
+field_dict_t20 = initial_data['field_dict']
+players_df = initial_data['players_df']
+ev_dict = initial_data['ev_dict']
+dict_360 = initial_data['dict_360']
+shot_per = initial_data['shot_per']
+length_dict = initial_data['length_dict']
+avg_360 = initial_data['avg_360']
+intrel = initial_data['intrel']
+sim_matrices = initial_data['sim_matrices']
 # Create a mapping of player names to image URLs
 player_images = dict(zip(players_df['fullname'], players_df['image_path']))
 
 # ─────────────────────────────
-# Header
+# Header with Women's Mode Toggle
 # ─────────────────────────────
+
+# Update global data when mode changes
+if 'current_mode_loaded' not in st.session_state:
+    st.session_state['current_mode_loaded'] = False
+
+current_is_womens = st.session_state.get('is_womens_mode', False)
+
+# Load data for current mode if not already loaded
+if current_is_womens != st.session_state.get('current_mode_loaded', False):
+    data = load_all_data(is_womens=current_is_womens)
+    st.session_state['current_field_dict'] = data['field_dict']
+    st.session_state['current_players_df'] = data['players_df']
+    st.session_state['current_ev_dict'] = data['ev_dict']
+    st.session_state['current_dict_360'] = data['dict_360']
+    st.session_state['current_shot_per'] = data['shot_per']
+    st.session_state['current_length_dict'] = data['length_dict']
+    st.session_state['current_avg_360'] = data['avg_360']
+    st.session_state['current_intrel'] = data['intrel']
+    st.session_state['current_sim_matrices'] = data['sim_matrices']
+    st.session_state['current_mode_loaded'] = current_is_womens
+
+# Assign from session state
+field_dict_t20 = st.session_state.get('current_field_dict', initial_data['field_dict'])
+players_df = st.session_state.get('current_players_df', initial_data['players_df'])
+ev_dict = st.session_state.get('current_ev_dict', initial_data['ev_dict'])
+dict_360 = st.session_state.get('current_dict_360', initial_data['dict_360'])
+shot_per = st.session_state.get('current_shot_per', initial_data['shot_per'])
+length_dict = st.session_state.get('current_length_dict', initial_data['length_dict'])
+avg_360 = st.session_state.get('current_avg_360', initial_data['avg_360'])
+intrel = st.session_state.get('current_intrel', initial_data['intrel'])
+sim_matrices = st.session_state.get('current_sim_matrices', initial_data['sim_matrices'])
+player_images = dict(zip(players_df['fullname'], players_df['image_path']))
+
+# Full width header
 st.markdown("""
 <div class="main-header">
     <h1 class="main-title">T20 Optimal Field Setting</h1>
@@ -1760,6 +1848,25 @@ st.markdown("""
     </div>
 </div>
 """, unsafe_allow_html=True)
+
+# Women's mode toggle - centered and prominent
+
+
+# Mode selection toggle
+prev_mode = st.session_state.get('is_womens_mode', False)
+
+is_womens = st.toggle(
+    "WOMEN'S MODE",
+    value=prev_mode,
+    key='is_womens_mode_toggle'
+)
+
+# Check if mode changed and force rerun to update filter lists
+if is_womens != prev_mode:
+    st.session_state['is_womens_mode'] = is_womens
+    st.rerun()
+
+st.session_state['is_womens_mode'] = is_womens
 
 # ─────────────────────────────
 # Tabs
@@ -1842,44 +1949,83 @@ with tab1:
             img_col, stats_col = st.columns([1, 2], vertical_alignment="center", gap="large")
 
             with img_col:
-                player_img_url = player_images.get(
-                    selected_batter,
-                    "https://via.placeholder.com/300x300.png?text=No+Image"
-                )
-
-                st.markdown(
-                    f"""
-                    <div style="
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        height: 100%;
-                        width: 100%;
-                    ">
+                is_womens = st.session_state.get('is_womens_mode', False)
+                
+                if is_womens:
+                    # Women's mode: display name only without box
+                    name_parts = selected_batter.split()
+                    if len(name_parts) > 1:
+                        # If name has multiple parts, put first part(s) on first line
+                        # and remaining on second line (surname typically last)
+                        first_line = ' '.join(name_parts[:-1])
+                        second_line = name_parts[-1]
+                        display_name = f"{first_line}<br/>{second_line}"
+                    else:
+                        display_name = selected_batter
+                    
+                    st.markdown(
+                        f"""
                         <div style="
-                            width: 280px;
-                            text-align: center;
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            height: 100%;
+                            width: 100%;
                         ">
-                            <img src="{player_img_url}"
-                                style="
-                                    width: 100%;
-                                    border-radius: 12px;
-                                    display: block;
-                                    margin: 0 auto;
-                                " /><p style="
-                                margin-top: 12px;
-                                margin-bottom: 0;
-                                font-size: 1.5rem;
-                                font-weight: 600;
+                            <p style="
+                                margin: 0;
+                                font-size: 2rem;
+                                font-weight: 700;
                                 text-align: center;
+                                color: white;
+                                line-height: 1.3;
                             ">
-                                {selected_batter}
+                                {display_name}
                             </p>
                         </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
+                        """,
+                        unsafe_allow_html=True
+                    )
+                else:
+                    # Men's mode: display image and name
+                    player_img_url = player_images.get(
+                        selected_batter,
+                        "https://via.placeholder.com/300x300.png?text=No+Image"
+                    )
+
+                    st.markdown(
+                        f"""
+                        <div style="
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            height: 100%;
+                            width: 100%;
+                        ">
+                            <div style="
+                                width: 280px;
+                                text-align: center;
+                            ">
+                                <img src="{player_img_url}"
+                                    style="
+                                        width: 100%;
+                                        border-radius: 12px;
+                                        display: block;
+                                        margin: 0 auto;
+                                    " /><p style="
+                                    margin-top: 12px;
+                                    margin-bottom: 0;
+                                    font-size: 1.5rem;
+                                    font-weight: 600;
+                                    text-align: center;
+                                ">
+                                    {selected_batter}
+                                </p>
+                            </div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
 
 
 
