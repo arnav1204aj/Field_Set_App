@@ -1887,7 +1887,16 @@ with tab1:
             # Batter selection
             batter_list = list(ev_dict.keys())
             st.markdown('<p style="color: white; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem;">Select Batter</p>', unsafe_allow_html=True)
-            selected_batter = st.selectbox("Select Batter", batter_list, label_visibility="collapsed", key="batter")
+            
+            # Set default batter based on mode
+            is_womens = st.session_state.get('is_womens_mode', False)
+            default_batter = "Smriti Mandhana" if is_womens else "Virat Kohli"
+            try:
+                default_index = batter_list.index(default_batter) if default_batter in batter_list else 0
+            except ValueError:
+                default_index = 0
+            
+            selected_batter = st.selectbox("Select Batter", batter_list, index=default_index, label_visibility="collapsed", key="batter")
 
             # Bowl kind selection
             bowl_kind_list = list(field_dict[selected_batter].keys())
