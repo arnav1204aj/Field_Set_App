@@ -2442,7 +2442,7 @@ with tab1:
                             the batter achieves compared to other batters in the same innings. Keeping in mind the nature of T20s,
                             Intent is given a 2x weight during multiplication. So for all Intent, Reliability and Int-Rel, a value of 1.20 for example means
                             the batter was 20% better, 0.8 means 20% worse, 1 is average performance. For reference, numbers of an average batter playing 
-                            in same conditions as the batter are provided.
+                            in same conditions as the batter are provided. Values use a time decay factor. Last 2 years data is given 50% weight.
                         </p>
                     
                     </div>
@@ -2527,9 +2527,9 @@ with tab1:
                         </h3>
                         <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem;">
                             The charts show how the batter distributes their runs across four key regions and different shots.<strong> To understand the batter's true strength 
-                            in a particular region or playing a particular shot, we compare his distributions to an 
+                            in a particular region or playing a particular shot, we compare his/her distributions to an 
                             average batter's distributions </strong>. Average batter's calculations are done on the same 
-                            line-length distribution the batter has faced in his career. The calculations consider run scoring
+                            line-length distribution the batter has faced in his/her career. The calculations consider run scoring
                             difficulty of a region or shot for the given line-length-bathand-pace/spin combination. 
                         </p>
                                 <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem;">
