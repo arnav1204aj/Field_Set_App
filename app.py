@@ -1263,6 +1263,9 @@ with tab2:
            The Sacred Nine Spots
         </a>
         </p>
+         <h2 class="info-title">Data Timeline</h2>   
+        <p style="color: rgba(255,255,255,0.85); line-height: 1.8; font-size: 1rem;"> 
+         Mens ODIs - since 2014, Mens T20s - since 2015, Womens T20s - since 2020                
     </div>
     """, unsafe_allow_html=True)
 
