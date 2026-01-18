@@ -11,9 +11,7 @@ import pickle
 # ─────────────────────────────
 st.markdown("""
 <style>
-            html {
-    font-size: 150%;
-}
+
 
     /* Import premium fonts */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
