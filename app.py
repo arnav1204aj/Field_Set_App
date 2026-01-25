@@ -623,7 +623,7 @@ with tab1:
                 data = field_dict[selected_batter][selected_bowl_kind][length_key][selected_outfielders]
             except KeyError:
                 st.error("No field setting found for this combination.")
-                raise
+                st.stop()
 
             # PLAYER IMAGE AND STATS ROW
             img_col, stats_col = st.columns([1, 2], vertical_alignment="center", gap="large")
