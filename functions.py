@@ -473,7 +473,8 @@ def plot_sector_ev_heatmap(
 
         # Modern red/orange gradient colormap
         
-        colors_list = ['#1a0000', '#450a0a', '#991b1b', '#dc2626', '#f97316', '#fbbf24', '#fde047']
+        
+        colors_list = ['#fde047', '#fbbf24', '#f97316', '#dc2626', '#991b1b', '#450a0a', '#1a0000']
         cmap = LinearSegmentedColormap.from_list('modern_red', colors_list, N=256)
 
         # Inner ring (Running EV) with glow effect
@@ -892,7 +893,8 @@ def create_shot_profile_chart(
 
         # Modern gradient colormap
         
-        colors_list = ['#1a0000', '#450a0a', '#991b1b', '#dc2626', '#f97316', '#fbbf24', '#fde047']
+        
+        colors_list = ['#fde047', '#fbbf24', '#f97316', '#dc2626', '#991b1b', '#450a0a', '#1a0000']
         cmap = LinearSegmentedColormap.from_list('modern_red', colors_list, N=256)
 
         vmin, vmax = min(shot_values), max(shot_values)
@@ -1080,10 +1082,10 @@ def create_similarity_chart(
     fig.patch.set_alpha(0.0)
     ax.set_facecolor('none')
 
-    
+   
     cmap = LinearSegmentedColormap.from_list(
         "sim_red",
-        ['#1a0000', '#450a0a', '#991b1b', '#dc2626', '#f97316', '#fde047'],
+        ['#fde047',  '#f97316', '#dc2626', '#991b1b', '#450a0a', '#1a0000'],
         N=256
     )
 
