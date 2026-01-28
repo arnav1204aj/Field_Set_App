@@ -56,6 +56,16 @@ def plot_intent_impact(
     # ── Cumulative intent impact
     raw_impact = np.cumsum(raw_brpb - raw_nrpb)
     ctl_impact = np.cumsum(ctl_brpb - ctl_nrpb)
+    def find_stable(impact):
+        idx = next(
+            (k for k, v in enumerate(impact)
+             if v >= 0 and np.all(impact[k:] >= 0)),
+            None
+        )
+        return valid[idx] if idx is not None else None
+
+    raw_stable = find_stable(raw_impact)
+    ctl_stable = find_stable(ctl_impact)
 
     # ─────────────────────────────
     # FIGURE SETUP
@@ -127,6 +137,29 @@ def plot_intent_impact(
     for spine in ax.spines.values():
         spine.set_visible(False)
 
+
+    summary = (
+        f"Minimum balls for positive intent impact: {raw_stable}\n"
+        f"Minimum balls for positive controlled intent impact: {ctl_stable}"
+    )
+
+    fig.text(
+    0.25,          # centered horizontally
+    -0.05,         # vertical position BELOW x-axis
+    summary,
+    ha="center",
+    va="center",
+    fontsize=11,
+    color="white",
+    fontweight="bold",
+    bbox=dict(
+        facecolor="#1a1a1a",
+        alpha=0.9,
+        boxstyle="round,pad=0.6",
+        edgecolor="white",
+        linewidth=2
+    )
+)
     plt.tight_layout()
     return fig
 
