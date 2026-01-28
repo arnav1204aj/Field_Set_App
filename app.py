@@ -1255,6 +1255,7 @@ with tab1:
                             Cumulative intent impact thus shows total extra runs as the innings progresses. The slope of the plot is an 
                             indicator of how much aggressive the batter is at that stage of the innings. A steeper positive slope means more aggression.
                             Negative slope means batter is affecting the team's total negatively due to low intent. Controlled runs is a product of control and runs.
+                            Values are weighed to give roughly 50% weight to recent 2 years of data.
                         </p>
                                
                     
