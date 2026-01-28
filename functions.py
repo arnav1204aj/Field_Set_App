@@ -10,6 +10,127 @@ import pandas as pd
 from matplotlib.colors import Normalize
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import LinearSegmentedColormap
+
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+def plot_intent_impact(
+    batter,
+    batter_stats,
+    bowl_kind="pace",
+    min_count=5
+):
+    """
+    Plot cumulative intent impact curves (raw vs controlled)
+    for a single batter vs spin or pace.
+    """
+
+    if batter not in batter_stats:
+        raise ValueError(f"{batter} not found in batter_stats")
+
+    if bowl_kind not in batter_stats[batter]:
+        raise ValueError(f"{batter} has no data vs {bowl_kind}")
+
+    data = batter_stats[batter][bowl_kind]
+
+    cnts = data["batter_ith_ball_count"]
+
+    raw_bat = data["batter_ith_ball_raw_runs"]
+    ctl_bat = data["batter_ith_ball_controlled_runs"]
+
+    raw_ns  = data["non_striker_ith_ball_raw_runs"]
+    ctl_ns  = data["non_striker_ith_ball_controlled_runs"]
+
+    valid = sorted(i for i in cnts if cnts[i] >= min_count)
+    if not valid:
+        raise ValueError("No points satisfy min_count filter")
+
+    # ── Per-ball expected values
+    raw_brpb = np.array([raw_bat[i] / cnts[i] for i in valid])
+    ctl_brpb = np.array([ctl_bat[i] / cnts[i] for i in valid])
+
+    raw_nrpb = np.array([raw_ns.get(i, 0) / cnts[i] for i in valid])
+    ctl_nrpb = np.array([ctl_ns.get(i, 0) / cnts[i] for i in valid])
+
+    # ── Cumulative intent impact
+    raw_impact = np.cumsum(raw_brpb - raw_nrpb)
+    ctl_impact = np.cumsum(ctl_brpb - ctl_nrpb)
+
+    # ─────────────────────────────
+    # FIGURE SETUP
+    # ─────────────────────────────
+    fig, ax = plt.subplots(figsize=(12, 6))
+    fig.patch.set_alpha(0.0)
+    ax.patch.set_alpha(0.0)
+
+    colors = {
+        "raw": "#ff9100",        # orange
+        "controlled": "#00e5ff"  # cyan
+    }
+
+    # ── Glow layers
+    for impact, color in [(raw_impact, colors["raw"]),
+                          (ctl_impact, colors["controlled"])]:
+        for lw, alpha in [(10, 0.06), (7, 0.10), (5, 0.14)]:
+            ax.plot(valid, impact,
+                    color=color,
+                    linewidth=lw,
+                    alpha=alpha,
+                    solid_capstyle="round",
+                    zorder=2)
+
+    # ── Main curves
+    ax.plot(valid, raw_impact,
+            color=colors["raw"],
+            linewidth=2.8,
+            label="Raw intent impact",
+            zorder=4)
+
+    ax.plot(valid, ctl_impact,
+            color=colors["controlled"],
+            linewidth=2.8,
+            label="Controlled intent impact",
+            zorder=5)
+
+    # Zero line
+    ax.axhline(0, color="white", linestyle="--",
+               linewidth=1.6, alpha=0.8, zorder=1)
+
+    # ─────────────────────────────
+    # Labels & title
+    # ─────────────────────────────
+    ax.set_xlabel("Balls Faced",
+                  fontsize=13, fontweight="bold", color="white")
+    ax.set_ylabel("Cumulative Intent Impact",
+                  fontsize=13, fontweight="bold", color="white")
+
+    ax.set_title(
+        f"Intent Impact Curve — {batter} vs {bowl_kind.capitalize()}",
+        fontsize=15,
+        fontweight="bold",
+        color="white",
+        pad=14
+    )
+
+    # Legend
+    legend = ax.legend(loc="upper left", frameon=True,
+                       fontsize=11, labelcolor="white")
+    legend.get_frame().set_facecolor("#1a1a1a")
+    legend.get_frame().set_edgecolor("white")
+    legend.get_frame().set_linewidth(2)
+    legend.get_frame().set_alpha(0.9)
+
+    # Grid & axes
+    ax.grid(True, linestyle="--", alpha=0.15)
+    ax.tick_params(colors="white", labelsize=11)
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+
+    plt.tight_layout()
+    return fig
+
+
 def plot_field_setting(field_data):
     """
     Ultra-modern cricket field visualization with transparent background

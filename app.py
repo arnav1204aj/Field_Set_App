@@ -2,7 +2,7 @@ import streamlit as st
 st.set_page_config(layout="wide", page_title="Optimal Field Setting | Cricket Analytics")
 
 import pandas as pd
-from functions import plot_field_setting, plot_intrel_pitch, plot_intrel_pitch_avg, plot_sector_ev_heatmap, create_shot_profile_chart, create_similarity_chart, create_zone_strength_table, get_top_similar_batters
+from functions import plot_intent_impact, plot_field_setting, plot_intrel_pitch, plot_intrel_pitch_avg, plot_sector_ev_heatmap, create_shot_profile_chart, create_similarity_chart, create_zone_strength_table, get_top_similar_batters
 
 import pickle
 
@@ -376,6 +376,7 @@ def get_data_paths(mode):
         'avg_360': f'{prefix}bat_360_avg.bin',
         'intrel': f'{prefix}intrel.bin',
         'sim_matrices': f'{prefix}sim_mat.bin',
+        'intent_impact': f'{prefix}intent_impact.bin',
         'players': 'players.csv'  # Same for all modes
     }
 
@@ -401,6 +402,7 @@ def load_all_data(mode):
         'avg_360': load_ev_dict(paths['avg_360']),
         'intrel': load_ev_dict(paths['intrel']),
         'sim_matrices': load_ev_dict(paths['sim_matrices']),
+        'intent_impact': load_ev_dict(paths['intent_impact'])
     }
     
     # Cache the loaded data in session state for fast switching
@@ -418,6 +420,7 @@ length_dict = initial_data['length_dict']
 avg_360 = initial_data['avg_360']
 intrel = initial_data['intrel']
 sim_matrices = initial_data['sim_matrices']
+intent_impact = initial_data['intent_impact']
 # Create a mapping of player names to image URLs
 player_images = dict(zip(players_df['fullname'], players_df['image_path']))
 
@@ -489,6 +492,7 @@ if 'previous_mode' not in st.session_state or st.session_state['previous_mode'] 
     st.session_state['current_avg_360'] = data['avg_360']
     st.session_state['current_intrel'] = data['intrel']
     st.session_state['current_sim_matrices'] = data['sim_matrices']
+    st.session_state['current_intent_impact'] = data['intent_impact']
     st.session_state['previous_mode'] = current_mode
 
 # Assign from session state
@@ -501,6 +505,7 @@ length_dict = st.session_state.get('current_length_dict', initial_data['length_d
 avg_360 = st.session_state.get('current_avg_360', initial_data['avg_360'])
 intrel = st.session_state.get('current_intrel', initial_data['intrel'])
 sim_matrices = st.session_state.get('current_sim_matrices', initial_data['sim_matrices'])
+intent_impact = st.session_state.get('current_intent_impact', initial_data['intent_impact'])
 player_images = dict(zip(players_df['fullname'], players_df['image_path']))
 
 # Full width header
@@ -1217,14 +1222,44 @@ with tab1:
                   except Exception:
                     st.warning('Unavailable')
 
+            st.markdown("---")
 
-            
+            st.markdown('<p class="section-header">Intent Impact Progression</p>', unsafe_allow_html=True)
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                try:
+                    fig = plot_intent_impact(
+                        selected_batter,
+                        intent_impact,
+                        selected_bowl_kind,
+                        min_count=5
+                    )
+                    st.pyplot(fig, use_container_width=True)
+                except Exception as e:
+                    st.warning('Intent Impact Analysis Unavailable')
                 
-                
-                
-                
-                
-                    # Add spacer for vertical centering
+            with col2:
+                st.markdown("""
+                    <div style="
+                        background: linear-gradient(135deg, rgba(153, 27, 27, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%);
+                        padding: 1.5rem;
+                        border-radius: 12px;
+                        border: 1px solid rgba(220,38,38,0.3);
+                        height: 100%;
+                    ">
+                        <h3 style="color: #fca5a5; font-size: 1.2rem; font-weight: 700; margin-top: 0;">
+                            Understanding Intent Impact Progression
+                        </h3>
+                        <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem;">
+                            Intent Impact for a ball is the extra runs batter adds to the team's total due to their intent on that ball.
+                            Cumulative intent impact thus shows total extra runs as the innings progresses. The slope of the plot is an 
+                            indicator of how much aggressive the batter is at that stage of the innings. A steeper positive slope means more aggression.
+                            Negative slope means batter is affecting the team's total negatively due to low intent. Controlled runs is a product of control and runs.
+                        </p>
+                               
+                    
+                    </div>
+                    """, unsafe_allow_html=True)       # Add spacer for vertical centering
                 
         
             
