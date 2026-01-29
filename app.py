@@ -1231,6 +1231,19 @@ with tab1:
                     fig = plot_intent_impact(
                         selected_batter,
                         intent_impact,
+                        'all bowlers',
+                        min_count=5
+                    )
+                    st.pyplot(fig, use_container_width=True)
+                except Exception as e:
+                    st.warning('Intent Impact Analysis Unavailable')
+                
+                
+            with col2:
+                try:
+                    fig = plot_intent_impact(
+                        selected_batter,
+                        intent_impact,
                         selected_bowl_kind,
                         min_count=5
                     )
@@ -1238,8 +1251,7 @@ with tab1:
                 except Exception as e:
                     st.warning('Intent Impact Analysis Unavailable')
                 
-            with col2:
-                st.markdown("""
+            st.markdown("""
                     <div style="
                         background: linear-gradient(135deg, rgba(153, 27, 27, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%);
                         padding: 1.5rem;
