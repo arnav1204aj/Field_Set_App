@@ -1008,7 +1008,7 @@ with tab1:
                             <span style="color: rgba(255,255,255,0.85);"> Boundary Class Runs</span>
                         </div>
                         <p style="color: rgba(255,255,255,0.75); font-size: 0.9rem; margin-top: 1rem; font-style: italic;">
-                            Brighter colors indicate higher sector importance and thus a priority region for the fielding teams.
+                            Darker colors indicate higher sector importance and thus a priority region for the fielding teams.
                         </p>
                     </div>
                     """, unsafe_allow_html=True)
