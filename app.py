@@ -2,7 +2,7 @@ import streamlit as st
 st.set_page_config(layout="wide", page_title="Optimal Field Setting | Cricket Analytics")
 
 import pandas as pd
-from functions import plot_intent_impact, plot_field_setting, plot_intrel_pitch, plot_intrel_pitch_avg, plot_sector_ev_heatmap, create_shot_profile_chart, create_similarity_chart, create_zone_strength_table, get_top_similar_batters
+from functions import plot_int_wagons, plot_intent_impact, plot_field_setting, plot_intrel_pitch, plot_intrel_pitch_avg, plot_sector_ev_heatmap, create_shot_profile_chart, create_similarity_chart, create_zone_strength_table, get_top_similar_batters
 
 import pickle
 
@@ -377,6 +377,7 @@ def get_data_paths(mode):
         'intrel': f'{prefix}intrel.bin',
         'sim_matrices': f'{prefix}sim_mat.bin',
         'intent_impact': f'{prefix}intent_impact.bin',
+        'intel_ww': f'{prefix}intel_ww.bin',
         'players': 'players.csv'  # Same for all modes
     }
 
@@ -402,7 +403,8 @@ def load_all_data(mode):
         'avg_360': load_ev_dict(paths['avg_360']),
         'intrel': load_ev_dict(paths['intrel']),
         'sim_matrices': load_ev_dict(paths['sim_matrices']),
-        'intent_impact': load_ev_dict(paths['intent_impact'])
+        'intent_impact': load_ev_dict(paths['intent_impact']),
+        'intel_ww': load_ev_dict(paths['intel_ww'])
     }
     
     # Cache the loaded data in session state for fast switching
@@ -421,6 +423,7 @@ avg_360 = initial_data['avg_360']
 intrel = initial_data['intrel']
 sim_matrices = initial_data['sim_matrices']
 intent_impact = initial_data['intent_impact']
+intel_ww = initial_data['intel_ww']
 # Create a mapping of player names to image URLs
 player_images = dict(zip(players_df['fullname'], players_df['image_path']))
 
@@ -493,6 +496,7 @@ if 'previous_mode' not in st.session_state or st.session_state['previous_mode'] 
     st.session_state['current_intrel'] = data['intrel']
     st.session_state['current_sim_matrices'] = data['sim_matrices']
     st.session_state['current_intent_impact'] = data['intent_impact']
+    st.session_state['current_intel_ww'] = data['intel_ww']
     st.session_state['previous_mode'] = current_mode
 
 # Assign from session state
@@ -506,6 +510,7 @@ avg_360 = st.session_state.get('current_avg_360', initial_data['avg_360'])
 intrel = st.session_state.get('current_intrel', initial_data['intrel'])
 sim_matrices = st.session_state.get('current_sim_matrices', initial_data['sim_matrices'])
 intent_impact = st.session_state.get('current_intent_impact', initial_data['intent_impact'])
+intel_ww = st.session_state.get('current_intel_ww', initial_data['intel_ww'])
 player_images = dict(zip(players_df['fullname'], players_df['image_path']))
 
 # Full width header
@@ -1018,6 +1023,38 @@ with tab1:
                     # After the Sector Importance section, add:
             
             st.markdown("---")
+            
+            st.markdown('<p class="section-header">Intelligent Wagon Wheel</p>', unsafe_allow_html=True)
+            col1, col2 = st.columns([1.6, 1.4])
+            with col1:
+                try:
+                   
+                    fig = plot_int_wagons(selected_batter,selected_lengths,selected_bowl_kind,10,intel_ww,theme='green')   
+                    st.pyplot(fig)
+                except Exception:
+                    st.warning('Unavailable')
+            with col2:
+                st.markdown("""
+                    <div style="
+                        background: linear-gradient(135deg, rgba(153, 27, 27, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%);
+                        padding: 1.5rem;
+                        border-radius: 12px;
+                        border: 1px solid rgba(220,38,38,0.3);
+                        height: 100%;
+                    ">
+                        <h3 style="color: #fca5a5; font-size: 1.2rem; font-weight: 700; margin-top: 0;">
+                            Understanding the Intelligent Wagon Wheel
+                        </h3>
+                        <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem;">
+                            This wagon wheel visualizes batter's true strength in different regions. Each line here is a shot played by the batter
+                            and length is a multiplication of runs and shot difficulty given the delivery characteristics. Thus a region concentrated by 
+                            longer lines is a region of good ability for the batter.
+                        </p>
+                    
+                    </div>
+                    """, unsafe_allow_html=True)
+            st.markdown("---")            
+
             st.markdown('<p class="section-header">Similar Batters</p>', unsafe_allow_html=True)
             col1, col2 = st.columns([2, 1])
             with col1:

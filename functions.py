@@ -15,6 +15,198 @@ from matplotlib.colors import LinearSegmentedColormap
 import numpy as np
 import matplotlib.pyplot as plt
 
+import numpy as np
+import matplotlib.pyplot as plt
+
+def plot_int_wagons(
+    batter,
+    lengths,
+    bowl_kind,
+    max_magnitude,
+    batter_context_metrics,
+    *,
+    min_norm=1e-9,
+    title_prefix="Intelligent Wagon Wheel",
+    theme="dark",                 # "dark" or "green"
+    show_axes=True,
+    invert_y=True,
+    quiver_width=0.0016,
+    glow=True,
+):
+    """
+    Plots ev vectors for a batter × length × bowl_kind from batter_context_metrics.
+
+    Expects:
+      batter_context_metrics[batter][length][bowl_kind]['evs'] -> list/np.array of 2D vectors
+    """
+
+    # ---------------------------
+    # Validate + Fetch
+    # ---------------------------
+    if batter not in batter_context_metrics:
+        raise KeyError(f"{batter} not in batter_context_metrics")
+    
+    
+    all_vecs = []
+
+    for ln in lengths:
+        try:
+            evs = batter_context_metrics[batter][ln][bowl_kind].get("evs", [])
+            if len(evs):
+                all_vecs.append(np.asarray(evs, dtype=float))
+        except KeyError:
+            continue
+
+    if not all_vecs:
+        raise ValueError(
+            f"No vectors found for {batter} | lengths={lengths} | bowl={bowl_kind}"
+        )
+
+    vecs = np.vstack(all_vecs)
+    if vecs.size == 0:
+        raise ValueError("No vectors found (empty evs).")
+
+    # ---------------------------
+    # Clip to circle
+    # ---------------------------
+    norms = np.linalg.norm(vecs, axis=1)
+    keep = norms > min_norm
+    vecs = vecs[keep]
+    norms = norms[keep]
+
+    if vecs.shape[0] == 0:
+        raise ValueError("All vectors have ~zero norm after filtering.")
+
+    scale = np.minimum(1.0, max_magnitude / (norms + 1e-12))
+    clipped = vecs * scale[:, None]
+
+    x = clipped[:, 0]
+    y = clipped[:, 1]
+    n = len(x)
+
+    origin_x = np.zeros(n)
+    origin_y = np.zeros(n)
+
+    # ---------------------------
+    # Figure setup (modern)
+    # ---------------------------
+    fig, ax = plt.subplots(figsize=(8.2, 8.2))
+    fig.patch.set_alpha(0.0)   # transparent figure like your other plots
+    ax.patch.set_alpha(0.0)
+
+    # Theme colors
+    if theme == "green":
+        field_color = "#15901e"
+        ring_color = "white"
+        text_color = "white"
+        quiver_color = "#ff2d2d"
+        glow_color = "#ff2d2d"
+        badge_bg = "#0b1a10"
+    else:  # "dark"
+        field_color = "#0b0f14"
+        ring_color = "white"
+        text_color = "white"
+        quiver_color = "#ff3b30"
+        glow_color = "#ff3b30"
+        badge_bg = "#1a1a1a"
+
+    # Optional: subtle field disc
+    disc = plt.Circle((0, 0), max_magnitude * 1.02, color=field_color, alpha=0.90, zorder=0)
+    ax.add_artist(disc)
+
+    ax.set_aspect("equal")
+    ax.axis("off")
+
+    # ---------------------------
+    # Quiver with glow
+    # ---------------------------
+    if glow:
+        for w, a in [(quiver_width * 2.8, 0.08), (quiver_width * 2.0, 0.12), (quiver_width * 1.4, 0.16)]:
+            ax.quiver(
+                origin_x, origin_y, x, y,
+                angles="xy", scale_units="xy", scale=1,
+                color=glow_color, alpha=a,
+                width=w, headwidth=0, headlength=0, headaxislength=0,
+                zorder=2
+            )
+
+    ax.quiver(
+        origin_x, origin_y, x, y,
+        angles="xy", scale_units="xy", scale=1,
+        color=quiver_color, alpha=0.95,
+        width=quiver_width,
+        headwidth=0, headlength=0, headaxislength=0,
+        zorder=3
+    )
+
+    # ---------------------------
+    # Boundary circle
+    # ---------------------------
+    circle = plt.Circle((0, 0), max_magnitude, color=ring_color, fill=False, linewidth=2.6, alpha=0.9, zorder=4)
+    ax.add_artist(circle)
+
+    # ---------------------------
+    # Axes / direction markers
+    # ---------------------------
+    if show_axes:
+        ax.axhline(0, color="white", linewidth=1.2, alpha=0.20, linestyle="--", zorder=1)
+        ax.axvline(0, color="white", linewidth=1.2, alpha=0.20, linestyle="--", zorder=1)
+
+        
+
+    # Batter facing arrow (compact + consistent)
+    # Arrow points "up" after invert_y, so we draw it like your style: from y=-0.35R to y=-0.05R
+    ay0 = -max_magnitude * 0.35
+    ax.arrow(
+        0, ay0, 0, max_magnitude * 0.28,
+        width=max_magnitude * 0.006,
+        head_width=max_magnitude * 0.06,
+        head_length=max_magnitude * 0.06,
+        fc="#ff1744", ec="white", linewidth=1.8,
+        alpha=0.95, zorder=6, length_includes_head=True
+    )
+    ax.text(
+        0, ay0 - max_magnitude * 0.06, "FACING",
+        color="white", fontsize=10, fontweight="bold",
+        ha="center", va="center",
+        bbox=dict(facecolor="#ff1744", edgecolor="white", linewidth=1.5, boxstyle="round,pad=0.45", alpha=0.95),
+        zorder=7
+    )
+
+    # ---------------------------
+    # Info badge
+    # ---------------------------
+    
+
+    # ---------------------------
+    # Limits / invert
+    # ---------------------------
+    ax.set_xlim(-max_magnitude * 1.08, max_magnitude * 1.08)
+    ax.set_ylim(-max_magnitude * 1.08, max_magnitude * 1.08)
+
+    if invert_y:
+        ax.invert_yaxis()
+
+    # ---------------------------
+    # Title
+    # ---------------------------
+    
+    # Subtitle line
+    ax.text(
+        0.5, 1.02,
+        f"{', '.join(map(str,lengths))} • {bowl_kind}",
+        transform=ax.transAxes,
+        ha="center", va="bottom",
+        fontsize=11, color=text_color, alpha=0.90
+    )
+
+    plt.tight_layout()
+    return fig
+
+
+
+
+
 def plot_intent_impact(
     batter,
     batter_stats,
