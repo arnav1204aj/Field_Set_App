@@ -1030,7 +1030,7 @@ with tab1:
             with col1:
                 try:
                    
-                    fig = plot_int_wagons(selected_batter,selected_lengths,selected_bowl_kind,90,intel_ww,theme='green')   
+                    fig = plot_int_wagons(selected_batter,selected_lengths,selected_bowl_kind,95,intel_ww,theme='green')   
                     st.pyplot(fig)
                 except Exception:
                     st.warning('Unavailable')
@@ -1049,7 +1049,7 @@ with tab1:
                         <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem;">
                             Answers where does the batter play more difficult shots. This wagon wheel visualizes batter's true strength in different regions. Each line here is a shot played by the batter
                             and length is a multiplication of runs and shot difficulty given the delivery characteristics. Thus a region concentrated by 
-                            longer lines is a region of good ability (relative to an average batter) for the batter. The p90 radius is 90 percentile of all shot lengths. A higher value means 
+                            longer lines is a region of good ability (relative to an average batter) for the batter. The p95 radius is 95 percentile of all shot lengths. A higher value means 
                             batter plays more difficult shots. This value is choosen as the boundary of the plot to visualise where more of these shots are played.
                         </p>
                     
