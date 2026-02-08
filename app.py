@@ -1048,7 +1048,8 @@ with tab1:
                         <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem;">
                             This wagon wheel visualizes batter's true strength in different regions. Each line here is a shot played by the batter
                             and length is a multiplication of runs and shot difficulty given the delivery characteristics. Thus a region concentrated by 
-                            longer lines is a region of good ability (relative to an average batter) for the batter.
+                            longer lines is a region of good ability (relative to an average batter) for the batter. The heatmap above combines frequency with 
+                            SR of different regions (result based), the wagon wheel combines frequency with shot difficulty (process based).
                         </p>
                     
                     </div>
