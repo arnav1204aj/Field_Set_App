@@ -1002,7 +1002,8 @@ with tab1:
                             Understanding the Heatmap
                         </h3>
                         <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem; margin-bottom: 1rem;">
-                            This polar heatmap shows the <strong>Importance (SR × Probability in that sector)</strong> of different sectors of the field.
+                            Answers where does the batter score more. This polar heatmap shows the 
+                            <strong>Importance (SR × Probability in that sector)</strong> of different sectors of the field.
                         </p>
                         <div style="margin: 0.8rem 0;">
                             <strong style="color: #fca5a5;">Inner Ring:</strong>
@@ -1046,10 +1047,9 @@ with tab1:
                             Understanding the Intelligent Wagon Wheel
                         </h3>
                         <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem;">
-                            This wagon wheel visualizes batter's true strength in different regions. Each line here is a shot played by the batter
+                            Answers where does the batter play more difficult shots. This wagon wheel visualizes batter's true strength in different regions. Each line here is a shot played by the batter
                             and length is a multiplication of runs and shot difficulty given the delivery characteristics. Thus a region concentrated by 
-                            longer lines is a region of good ability (relative to an average batter) for the batter. The heatmap above combines frequency with 
-                            SR of different regions (result based), the wagon wheel combines frequency with shot difficulty (process based).
+                            longer lines is a region of good ability (relative to an average batter) for the batter.
                         </p>
                     
                     </div>
