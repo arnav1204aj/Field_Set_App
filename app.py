@@ -5,6 +5,7 @@ import pandas as pd
 from functions import plot_int_wagons, plot_intent_impact, plot_field_setting, plot_intrel_pitch, plot_intrel_pitch_avg, plot_sector_ev_heatmap, create_shot_profile_chart, create_similarity_chart, create_zone_strength_table, get_top_similar_batters
 
 import requests
+import time
 from typing import Dict, Any, List, Optional
 
 
@@ -12,17 +13,34 @@ from typing import Dict, Any, List, Optional
 API_KEY = st.secrets["API_KEY"]
 BACKEND_URL = st.secrets["BACKEND_URL"]
 API_HEADERS = {"X-API-Key": API_KEY}
+REQUEST_TIMEOUT = 60
+MAX_RETRIES = 4
+RETRY_STATUS_CODES = {502, 503, 504}
 
 def make_request(endpoint: str, method: str = "GET", data: Optional[Dict] = None) -> Optional[Dict]:
     """Helper function to make requests to FastAPI backend with error handling"""
     try:
         url = f"{BACKEND_URL}{endpoint}"
-        if method == "GET":
-            response = requests.get(url, headers=API_HEADERS, timeout=10)
-        else:
-            response = requests.post(url, json=data, headers=API_HEADERS, timeout=10)
-        response.raise_for_status()
-        return response.json()
+        for attempt in range(MAX_RETRIES):
+            try:
+                if method == "GET":
+                    response = requests.get(url, headers=API_HEADERS, timeout=REQUEST_TIMEOUT)
+                else:
+                    response = requests.post(url, json=data, headers=API_HEADERS, timeout=REQUEST_TIMEOUT)
+                response.raise_for_status()
+                return response.json()
+            except requests.exceptions.HTTPError as e:
+                status_code = e.response.status_code if e.response is not None else None
+                should_retry = status_code in RETRY_STATUS_CODES and attempt < MAX_RETRIES - 1
+                if should_retry:
+                    time.sleep(2 ** attempt)
+                    continue
+                raise
+            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
+                if attempt < MAX_RETRIES - 1:
+                    time.sleep(2 ** attempt)
+                    continue
+                raise
     except requests.exceptions.ConnectionError:
         st.error(f"Cannot connect to backend at {BACKEND_URL}")
         st.info("Start the backend with: python backend.py")
