@@ -252,13 +252,22 @@ def plot_intent_impact(
 
     data = batter_block[bowl_kind]
 
-    cnts = data["batter_ith_ball_count"]
+    def _normalize_ball_indexed_map(d):
+        out = {}
+        for k, v in (d or {}).items():
+            try:
+                ik = int(k)
+            except Exception:
+                continue
+            out[ik] = v
+        return out
 
-    raw_bat = data["batter_ith_ball_raw_runs"]
-    ctl_bat = data["batter_ith_ball_controlled_runs"]
-
-    raw_ns  = data["non_striker_ith_ball_raw_runs"]
-    ctl_ns  = data["non_striker_ith_ball_controlled_runs"]
+    # Backend JSON serializes dict keys to strings; convert back to int indices.
+    cnts = _normalize_ball_indexed_map(data.get("batter_ith_ball_count", {}))
+    raw_bat = _normalize_ball_indexed_map(data.get("batter_ith_ball_raw_runs", {}))
+    ctl_bat = _normalize_ball_indexed_map(data.get("batter_ith_ball_controlled_runs", {}))
+    raw_ns = _normalize_ball_indexed_map(data.get("non_striker_ith_ball_raw_runs", {}))
+    ctl_ns = _normalize_ball_indexed_map(data.get("non_striker_ith_ball_controlled_runs", {}))
 
     valid = sorted(i for i in cnts if cnts[i] >= min_count)
     if not valid:
