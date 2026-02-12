@@ -811,18 +811,38 @@ with tab1:
                 with c2:
                     st.markdown('<p class="section-header">Protection Stats and Fielder Contributions</p>', unsafe_allow_html=True)
                     prot_stats = fetch_protection_stats(current_mode, selected_batter, selected_bowl_kind, selected_lengths, selected_outfielders)
+                    batter_running = float((data.get('protection_stats', {}) or {}).get('running', prot_stats.get('batter_running', 0)) or 0)
+                    batter_boundary = float((data.get('protection_stats', {}) or {}).get('boundary', prot_stats.get('batter_boundary', 0)) or 0)
+
+                    # Match app2 logic: try exact average-batter composite length key first, then fallback.
+                    global_running = float(prot_stats.get('global_running', 0) or 0)
+                    global_boundary = float(prot_stats.get('global_boundary', 0) or 0)
+                    try:
+                        avg_field_setup = fetch_field_setup(
+                            current_mode,
+                            "average batter",
+                            selected_bowl_kind,
+                            selected_lengths,
+                            selected_outfielders
+                        )
+                        if avg_field_setup:
+                            avg_stats = avg_field_setup.get("protection_stats", {}) or {}
+                            global_running = float(avg_stats.get("running", global_running) or global_running)
+                            global_boundary = float(avg_stats.get("boundary", global_boundary) or global_boundary)
+                    except Exception:
+                        pass
 
                     a1, a2 = st.columns(2)
                     with a1:
-                        st.metric("RUNNING PROTECTION", f"{prot_stats.get('batter_running', 0):.1f}%", delta=f"{prot_stats.get('global_running', 0) - prot_stats.get('batter_running', 0):.1f}%")
+                        st.metric("RUNNING PROTECTION", f"{batter_running:.1f}%", delta=f"{global_running - batter_running:.1f}%")
                     with a2:
-                        st.metric("GLOBAL AVG (RUN. PROT.)", f"{prot_stats.get('global_running', 0):.1f}%")
+                        st.metric("GLOBAL AVG (RUN. PROT.)", f"{global_running:.1f}%")
 
                     b1, b2 = st.columns(2)
                     with b1:
-                        st.metric("BOUNDARY PROTECTION", f"{prot_stats.get('batter_boundary', 0):.1f}%", delta=f"{prot_stats.get('global_boundary', 0) - prot_stats.get('batter_boundary', 0):.1f}%")
+                        st.metric("BOUNDARY PROTECTION", f"{batter_boundary:.1f}%", delta=f"{global_boundary - batter_boundary:.1f}%")
                     with b2:
-                        st.metric("GLOBAL AVG (BD. PROT.)", f"{prot_stats.get('global_boundary', 0):.1f}%")
+                        st.metric("GLOBAL AVG (BD. PROT.)", f"{global_boundary:.1f}%")
 
                     inf_contrib = data.get('infielder_ev_run_percent', [])
                     out_contrib = data.get('outfielder_ev_bd_percent', [])
@@ -1042,7 +1062,7 @@ with tab1:
                     st.pyplot(zone_fig, use_container_width=True)
             with avg_col:
                 zone_fig, _ = create_zone_strength_table(
-                    zone_data.get('avg_360_selected', {}),
+                    zone_data.get('dict_360_selected', {}),
                     selected_batter,
                     selected_lengths,
                     selected_bowl_kind,
