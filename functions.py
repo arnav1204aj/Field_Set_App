@@ -50,13 +50,13 @@ def plot_int_wagons(
     # ---------------------------
     # Validate + Fetch
     # ---------------------------
-    if batter not in batter_context_metrics:
-        raise KeyError(f"{batter} not in batter_context_metrics")
+    source = batter_context_metrics or {}
 
     all_vecs = []
     for ln in lengths:
         try:
-            evs = batter_context_metrics[batter][ln][bowl_kind].get("evs", [])
+            ln_block = source.get(ln, {}) or {}
+            evs = ln_block.get("evs", [])
             if len(evs):
                 all_vecs.append(np.asarray(evs, dtype=float))
         except KeyError:
@@ -243,13 +243,14 @@ def plot_intent_impact(
     for a single batter vs spin or pace.
     """
 
-    if batter not in batter_stats:
-        raise ValueError(f"{batter} not found in batter_stats")
-
-    if bowl_kind not in batter_stats[batter]:
+    batter_block = batter_stats or {}
+    if bowl_kind not in batter_block:
+        mapped = "pace" if bowl_kind == "pace bowler" else ("spin" if bowl_kind == "spin bowler" else bowl_kind)
+        bowl_kind = mapped
+    if bowl_kind not in batter_block:
         raise ValueError(f"{batter} has no data vs {bowl_kind}")
 
-    data = batter_stats[batter][bowl_kind]
+    data = batter_block[bowl_kind]
 
     cnts = data["batter_ith_ball_count"]
 
@@ -778,7 +779,7 @@ def plot_sector_ev_heatmap(
         per_len_dfs = {}
         for ln in sel_lens:
             try:
-                df = ev_dict[batter_name].get(ln, {}).get(bowl_kind)
+                df = ev_dict.get(ln)
                 if df is None:
                     # missing length/bowl kind -> will be treated as zeros
                     per_len_dfs[ln] = None
@@ -804,9 +805,7 @@ def plot_sector_ev_heatmap(
             denom = 0.0
 
             for ln in sel_lens:
-                balls = length_dict.get(batter_name, {}) \
-                                    .get(bowl_kind, {}) \
-                                    .get(ln, 0)
+                balls = length_dict.get(ln, 0)
 
                 if balls == 0:
                     continue
@@ -1041,7 +1040,7 @@ def create_zone_strength_table(dict_360, batter_name, selected_lengths, bowl_kin
             
             for ln in sel_lens:
                 try:
-                    per = dict_360[batter_name].get(ln, {}).get(bowl_kind, {}).get(rc)
+                    per = dict_360.get(ln, {}).get(rc)
                     per_len_data[ln] = per
                     if per:
                         keys_union.update(per.keys())
@@ -1054,9 +1053,7 @@ def create_zone_strength_table(dict_360, batter_name, selected_lengths, bowl_kin
                 denom = 0.0
 
                 for ln in sel_lens:
-                    balls = length_dict.get(batter_name, {}) \
-                                        .get(bowl_kind, {}) \
-                                        .get(ln, 0)
+                    balls = length_dict.get(ln, 0)
 
                     if balls == 0:
                         continue
@@ -1217,7 +1214,7 @@ def create_shot_profile_chart(
         shots_set = set()
         per_len_shots = {}
         for ln in sel_lens:
-            per = shot_per.get(batter_name, {}).get(ln, {}).get(bowl_kind, {})
+            per = shot_per.get(ln, {})
             per_len_shots[ln] = per
             shots_set.update([s for s, v in (per or {}).items() if isinstance(v, dict)])
 
@@ -1228,9 +1225,7 @@ def create_shot_profile_chart(
             denom = 0.0
 
             for ln in sel_lens:
-                balls = length_dict.get(batter_name, {}) \
-                                    .get(bowl_kind, {}) \
-                                    .get(ln, 0)
+                balls = length_dict.get(ln, 0)
 
                 if balls == 0:
                     continue
@@ -1534,7 +1529,7 @@ def plot_intrel_pitch(
         bowl_kind = 'pace'
     else:
         bowl_kind = 'spin'    
-    data = intrel_results.get(batter, {}).get(bowl_kind, {})
+    data = intrel_results or {}
     if not data:
         raise ValueError(f"No data for {batter} ({bowl_kind})")
 
@@ -1675,7 +1670,7 @@ def plot_intrel_pitch_avg(
     else:
         bowl_kind = 'spin'
 
-    data = intrel_results.get(batter, {}).get(bowl_kind, {})
+    data = intrel_results or {}
     if not data:
         raise ValueError(f"No data for {batter} ({bowl_kind})")
 
