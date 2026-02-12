@@ -82,31 +82,31 @@ ANALYSIS_SECTIONS = [
     "Intent Impact Progression",
 ]
 
-@st.cache_data(ttl=900, max_entries=5)
+@st.cache_data(ttl=900, max_entries=50)
 def fetch_batters(mode: str) -> List[str]:
     """Fetch list of batters from backend"""
     response = make_request(f"/batters/{mode}")
     return response['batters'] if response else []
 
-@st.cache_data(ttl=900, max_entries=5)
+@st.cache_data(ttl=900, max_entries=50)
 def fetch_players(mode: str) -> List[Dict]:
     """Fetch players data from backend"""
     response = make_request(f"/players/{mode}")
     return response['players'] if response else []
 
-@st.cache_data(ttl=900, max_entries=5)
+@st.cache_data(ttl=900, max_entries=50)
 def fetch_bowl_kinds(mode: str, batter: str) -> List[str]:
     """Fetch available bowling kinds from backend"""
     response = make_request(f"/bowl-kinds/{mode}/{batter}")
     return response['bowl_kinds'] if response else []
 
-@st.cache_data(ttl=900, max_entries=10)
+@st.cache_data(ttl=900, max_entries=50)
 def fetch_lengths(mode: str, batter: str, bowl_kind: str) -> List[str]:
     """Fetch available lengths from backend"""
     response = make_request(f"/lengths/{mode}/{batter}/{bowl_kind}")
     return response['lengths'] if response else []
 
-@st.cache_data(ttl=900, max_entries=10)
+@st.cache_data(ttl=900, max_entries=50)
 def fetch_outfielders(mode: str, batter: str, bowl_kind: str, lengths: List[str]) -> List[str]:
     """Fetch available outfielder configurations from backend"""
     response = make_request(
@@ -116,7 +116,7 @@ def fetch_outfielders(mode: str, batter: str, bowl_kind: str, lengths: List[str]
     )
     return response['outfielders'] if response else []
 
-@st.cache_data(ttl=300, max_entries=10)
+@st.cache_data(ttl=600, max_entries=50)
 def fetch_field_setup(mode: str, batter: str, bowl_kind: str, lengths: List[str], outfielders: str) -> Optional[Dict]:
     """Fetch field setup from backend"""
     response = make_request(
@@ -132,7 +132,7 @@ def fetch_field_setup(mode: str, batter: str, bowl_kind: str, lengths: List[str]
     )
     return response['field_setup'] if response else None
 
-@st.cache_data(ttl=300, max_entries=10)
+@st.cache_data(ttl=600, max_entries=50)
 def fetch_protection_stats(mode: str, batter: str, bowl_kind: str, lengths: List[str], outfielders: str) -> Optional[Dict]:
     """Fetch protection stats from backend"""
     response = make_request(
@@ -148,7 +148,7 @@ def fetch_protection_stats(mode: str, batter: str, bowl_kind: str, lengths: List
     )
     return response if response else None
 
-@st.cache_data(ttl=300, max_entries=10)
+@st.cache_data(ttl=600, max_entries=50)
 def fetch_ev_heatmap_data(mode: str, batter: str, bowl_kind: str, lengths: List[str]) -> Optional[Dict]:
     """Fetch EV heatmap data from backend"""
     response = make_request(
@@ -164,7 +164,7 @@ def fetch_ev_heatmap_data(mode: str, batter: str, bowl_kind: str, lengths: List[
     )
     return response if response else None
 
-@st.cache_data(ttl=300, max_entries=10)
+@st.cache_data(ttl=600, max_entries=50)
 def fetch_zone_strength(mode: str, batter: str, bowl_kind: str, lengths: List[str]) -> Optional[Dict]:
     """Fetch zone strength data from backend"""
     response = make_request(
@@ -180,7 +180,7 @@ def fetch_zone_strength(mode: str, batter: str, bowl_kind: str, lengths: List[st
     )
     return response if response else None
 
-@st.cache_data(ttl=300, max_entries=10)
+@st.cache_data(ttl=600, max_entries=50)
 def fetch_similar_batters(mode: str, batter: str, bowl_kind: str, lengths: List[str]) -> Optional[Dict]:
     """Fetch similar batters data from backend"""
     response = make_request(
@@ -196,7 +196,7 @@ def fetch_similar_batters(mode: str, batter: str, bowl_kind: str, lengths: List[
     )
     return response if response else None
 
-@st.cache_data(ttl=300, max_entries=10)
+@st.cache_data(ttl=600, max_entries=50)
 def fetch_intrel_data(mode: str, batter: str, bowl_kind: str, lengths: List[str]) -> Optional[Dict]:
     """Fetch intent-reliability data from backend"""
     response = make_request(
@@ -212,7 +212,7 @@ def fetch_intrel_data(mode: str, batter: str, bowl_kind: str, lengths: List[str]
     )
     return response if response else None
 
-@st.cache_data(ttl=300, max_entries=10)
+@st.cache_data(ttl=600, max_entries=50)
 def fetch_intent_impact_data(mode: str, batter: str, bowl_kind: str) -> Optional[Dict]:
     """Fetch intent impact data from backend"""
     response = make_request(
@@ -228,7 +228,7 @@ def fetch_intent_impact_data(mode: str, batter: str, bowl_kind: str) -> Optional
     )
     return response if response else None
 
-@st.cache_data(ttl=300, max_entries=10)
+@st.cache_data(ttl=600, max_entries=50)
 def fetch_intelligent_wagon_wheel(mode: str, batter: str, bowl_kind: str, lengths: List[str]) -> Optional[Dict]:
     """Fetch intelligent wagon wheel data from backend"""
     response = make_request(
@@ -244,7 +244,7 @@ def fetch_intelligent_wagon_wheel(mode: str, batter: str, bowl_kind: str, length
     )
     return response if response else None
 
-@st.cache_data(ttl=300, max_entries=10)
+@st.cache_data(ttl=600, max_entries=50)
 def fetch_shot_profile(mode: str, batter: str, bowl_kind: str, lengths: List[str]) -> Optional[Dict]:
     """Fetch shot profile data from backend"""
     response = make_request(
