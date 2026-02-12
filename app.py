@@ -678,11 +678,9 @@ with tab1:
                 key="analysis_sections"
             )
 
-            selected_outfielders = ""
-            if "Field Overview" in selected_sections:
-                outfielder_list = fetch_outfielders(current_mode, selected_batter, selected_bowl_kind, selected_lengths)
-                st.markdown('<p style="color: white; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem;">Select Outfielders</p>', unsafe_allow_html=True)
-                selected_outfielders = st.selectbox("Select Outfielders", outfielder_list, label_visibility="collapsed", key="out") if outfielder_list else ""
+            outfielder_list = fetch_outfielders(current_mode, selected_batter, selected_bowl_kind, selected_lengths)
+            st.markdown('<p style="color: white; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem;">Select Outfielders</p>', unsafe_allow_html=True)
+            selected_outfielders = st.selectbox("Select Outfielders", outfielder_list, label_visibility="collapsed", key="out") if outfielder_list else ""
 
     if submit and "Field Overview" in selected_sections:
         st.markdown('<p class="section-header">Field Overview</p>', unsafe_allow_html=True)
