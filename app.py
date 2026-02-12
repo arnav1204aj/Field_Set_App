@@ -696,13 +696,76 @@ with tab1:
                 data = field_setup
                 img_col, stats_col = st.columns([1, 2], vertical_alignment="center", gap="large")
                 with img_col:
-                    if current_mode == 'WOMENS_T20':
-                        st.markdown(f'<p class="player-name" style="text-align:center; margin-top: 3rem;">{selected_batter}</p>', unsafe_allow_html=True)
+                    show_image = current_mode != 'WOMENS_T20'
+
+                    if not show_image:
+                        name_parts = selected_batter.split()
+                        if len(name_parts) > 1:
+                            first_line = ' '.join(name_parts[:-1])
+                            second_line = name_parts[-1]
+                            display_name = f"{first_line}<br/>{second_line}"
+                        else:
+                            display_name = selected_batter
+
+                        st.markdown(
+                            f"""
+                            <div style="
+                                display: flex;
+                                justify-content: center;
+                                align-items: center;
+                                height: 100%;
+                                width: 100%;
+                            ">
+                                <p style="
+                                    margin: 0;
+                                    font-size: 2rem;
+                                    font-weight: 700;
+                                    text-align: center;
+                                    color: white;
+                                    line-height: 1.3;
+                                ">
+                                    {display_name}
+                                </p>
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
                     else:
                         players_list = fetch_players(current_mode)
                         player_images = {player['fullname']: player.get('image_path', '') for player in players_list} if players_list else {}
                         player_img_url = player_images.get(selected_batter, "https://via.placeholder.com/300x300.png?text=No+Image")
-                        st.markdown(f'<div class="player-img-wrapper"><img src="{player_img_url}" style="width:100%; border-radius:12px; display:block; margin:0 auto;" /><p style="margin-top:12px; margin-bottom:0; font-size:1.5rem; font-weight:600; text-align:center;">{selected_batter}</p></div>', unsafe_allow_html=True)
+
+                        st.markdown(
+                            f"""
+                            <div style="
+                                display: flex;
+                                justify-content: center;
+                                align-items: center;
+                                height: 100%;
+                                width: 100%;
+                            ">
+                                <div class="player-img-wrapper">
+                                    <img src="{player_img_url}"
+                                        style="
+                                            width: 100%;
+                                            border-radius: 12px;
+                                            display: block;
+                                            margin: 0 auto;
+                                        " />
+                                    <p style="
+                                        margin-top: 12px;
+                                        margin-bottom: 0;
+                                        font-size: 1.5rem;
+                                        font-weight: 600;
+                                        text-align: center;
+                                    ">
+                                        {selected_batter}
+                                    </p>
+                                </div>
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
                 with stats_col:
                     st.markdown(f'<p class="context-info" style="color: rgba(255,255,255,0.7); font-size:1.1rem; font-weight:500;">{selected_bowl_kind} | {", ".join(selected_lengths)} | {selected_outfielders} outfielders</p>', unsafe_allow_html=True)
 
