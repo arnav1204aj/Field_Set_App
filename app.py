@@ -10,10 +10,9 @@ from typing import Dict, Any, List, Optional
 
 
 # ─────────────────────────────
-# API_KEY = st.secrets["API_KEY"]
-# BACKEND_URL = st.secrets["BACKEND_URL"]
-API_KEY = 'Annupari1204'
-BACKEND_URL = 'https://web-production-e978e.up.railway.app'
+API_KEY = st.secrets["API_KEY"]
+BACKEND_URL = st.secrets["BACKEND_URL"]
+
 API_HEADERS = {"X-API-Key": API_KEY}
 REQUEST_TIMEOUT = 60
 MAX_RETRIES = 4
