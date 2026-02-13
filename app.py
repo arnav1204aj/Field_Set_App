@@ -1050,6 +1050,7 @@ with tab1:
                 zone_data_cached = fetch_zone_strength(current_mode, selected_batter, selected_bowl_kind, selected_lengths)
             zone_data = zone_data_cached
             with reg_col:
+                st.markdown(f'<p class="subsection-header">Batter\'s Run Distribution</p>', unsafe_allow_html=True)
                 zone_fig, _ = create_zone_strength_table(
                     zone_data.get('dict_360_selected', {}),
                     selected_batter,
@@ -1061,6 +1062,7 @@ with tab1:
                 if zone_fig:
                     st.pyplot(zone_fig, use_container_width=True)
             with avg_col:
+                st.markdown(f'<p class="subsection-header">Avg Batter\'s Run Distribution</p>', unsafe_allow_html=True)
                 zone_fig, _ = create_zone_strength_table(
                     zone_data.get('dict_360_selected', {}),
                     selected_batter,
