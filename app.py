@@ -669,6 +669,10 @@ with tab1:
             if not selected_lengths and available_lengths:
                 selected_lengths = [available_lengths[0]]
 
+            outfielder_list = fetch_outfielders(current_mode, selected_batter, selected_bowl_kind, selected_lengths)
+            st.markdown('<p style="color: white; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem;">Select Outfielders</p>', unsafe_allow_html=True)
+            selected_outfielders = st.selectbox("Select Outfielders", outfielder_list, label_visibility="collapsed", key="out") if outfielder_list else ""    
+
             st.markdown('<p style="color: white; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem;">I want to see</p>', unsafe_allow_html=True)
             selected_sections = st.multiselect(
                 "I want to see",
@@ -678,9 +682,7 @@ with tab1:
                 key="analysis_sections"
             )
 
-            outfielder_list = fetch_outfielders(current_mode, selected_batter, selected_bowl_kind, selected_lengths)
-            st.markdown('<p style="color: white; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem; margin-top: 1rem;">Select Outfielders</p>', unsafe_allow_html=True)
-            selected_outfielders = st.selectbox("Select Outfielders", outfielder_list, label_visibility="collapsed", key="out") if outfielder_list else ""
+            
 
     if submit and "Field Overview" in selected_sections:
         st.markdown('<p class="section-header">Field Overview</p>', unsafe_allow_html=True)
