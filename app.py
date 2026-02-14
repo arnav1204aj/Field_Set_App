@@ -10,7 +10,7 @@ import time
 from typing import Dict, Any, List, Optional
 
 
-# ─────────────────────────────
+# # ─────────────────────────────
 API_KEY = st.secrets["API_KEY"]
 BACKEND_URL = st.secrets["BACKEND_URL"]
 
@@ -361,12 +361,50 @@ def _render_compare_rows(
 
     for idx, r in enumerate(rows):
         color1, color2 = _cmp_class(float(r["v1"]), float(r["v2"]), bool(r.get("higher_is_better", True)))
+        help_text = (r.get("help") or "").replace('"', "&quot;")
+        info_html = (
+            f"""
+            <details style="display:inline-block; margin-left:10px; vertical-align:middle; position:relative;">
+                <summary
+                    title="{help_text}"
+                    style="
+                        list-style:none;
+                        cursor:pointer;
+                        color:#67e8f9;
+                        font-size:0.86rem;
+                        font-weight:800;
+                        display:inline-block;
+                        user-select:none;
+                    "
+                >ⓘ</summary>
+                <div style="
+                    position:absolute;
+                    top:22px;
+                    left:0;
+                    z-index:9999;
+                    width:260px;
+                    padding:6px 8px;
+                    border-radius:8px;
+                    border:1px solid rgba(103,232,249,0.45);
+                    background:rgba(2,6,23,0.92);
+                    color:#e2e8f0;
+                    font-size:0.78rem;
+                    line-height:1.35;
+                    text-transform:none;
+                    letter-spacing:0;
+                    font-weight:500;
+                    box-shadow:0 10px 24px rgba(0,0,0,0.35);
+                ">{help_text}</div>
+            </details>
+            """
+            if help_text else ""
+        )
         row_c1, row_c2 = st.columns(2, gap="large")
         with row_c1:
             st.markdown(
                 f"""
                 <div style="padding:0.7rem 0.85rem; border:1px solid rgba(255,255,255,0.12); border-radius:10px; background:rgba(255,255,255,0.03); margin-bottom:0.25rem;">
-                    <div style="font-size:0.82rem; color:#fca5a5; text-transform:uppercase; letter-spacing:0.5px;">{r['label']}</div>
+                    <div style="font-size:0.82rem; color:#fca5a5; text-transform:uppercase; letter-spacing:0.5px;">{r['label']}{info_html}</div>
                     <div style="font-size:1.22rem; font-weight:700; color:{color1}; margin-top:0.2rem;">{r['s1']}</div>
                 </div>
                 """,
@@ -376,7 +414,7 @@ def _render_compare_rows(
             st.markdown(
                 f"""
                 <div style="padding:0.7rem 0.85rem; border:1px solid rgba(255,255,255,0.12); border-radius:10px; background:rgba(255,255,255,0.03); margin-bottom:0.25rem;">
-                    <div style="font-size:0.82rem; color:#fca5a5; text-transform:uppercase; letter-spacing:0.5px;">{r['label']}</div>
+                    <div style="font-size:0.82rem; color:#fca5a5; text-transform:uppercase; letter-spacing:0.5px;">{r['label']}{info_html}</div>
                     <div style="font-size:1.22rem; font-weight:700; color:{color2}; margin-top:0.2rem;">{r['s2']}</div>
                 </div>
                 """,
@@ -1433,7 +1471,7 @@ if active_view == "Compare":
         elif not outfielders_compare:
             st.warning("No common outfielder count available for this filter.")
         else:
-            
+            st.markdown('Click ⓘ for small metric explainers')
 
             z1 = fetch_zone_strength(current_mode, batter1, bowl_kind_compare, selected_compare_lengths) or {}
             z2 = fetch_zone_strength(current_mode, batter2, bowl_kind_compare, selected_compare_lengths) or {}
@@ -1453,16 +1491,21 @@ if active_view == "Compare":
                 for rc, lbl in [("running", "Running 360"), ("boundary", "Boundary 360"), ("overall", "Overall 360")]:
                     v1 = _avg([d1.get(ln, {}).get(rc, {}).get("360_score", 0) for ln in selected_compare_lengths])
                     v2 = _avg([d2.get(ln, {}).get(rc, {}).get("360_score", 0) for ln in selected_compare_lengths])
-                    rows.append({"label": lbl, "v1": v1, "v2": v2, "s1": _fmt(v1), "s2": _fmt(v2), "higher_is_better": True})
+                    help_text = {
+                        "running": "360 degree score of running class runs.",
+                        "boundary": "360 degree score of boundary class runs.",
+                        "overall": "360 degree score of overall runs.",
+                    }[rc]
+                    rows.append({"label": lbl, "v1": v1, "v2": v2, "s1": _fmt(v1), "s2": _fmt(v2), "higher_is_better": True, "help": help_text})
                 rp1 = float(p1.get("batter_running", 0) or 0)
                 rp2 = float(p2.get("batter_running", 0) or 0)
                 bp1 = float(p1.get("batter_boundary", 0) or 0)
                 bp2 = float(p2.get("batter_boundary", 0) or 0)
-                rows.append({"label": "Running Protection", "v1": rp1, "v2": rp2, "s1": _fmt(rp1, "%"), "s2": _fmt(rp2, "%"), "higher_is_better": False})
-                rows.append({"label": "Boundary Protection", "v1": bp1, "v2": bp2, "s1": _fmt(bp1, "%"), "s2": _fmt(bp2, "%"), "higher_is_better": False})
+                rows.append({"label": "Running Protection", "v1": rp1, "v2": rp2, "s1": _fmt(rp1, "%"), "s2": _fmt(rp2, "%"), "higher_is_better": False, "help": "% of running runs saved by optimal field."})
+                rows.append({"label": "Boundary Protection", "v1": bp1, "v2": bp2, "s1": _fmt(bp1, "%"), "s2": _fmt(bp2, "%"), "higher_is_better": False, "help": "% of boundary runs saved by optimal field."})
                 p95_1 = _calc_p95_radius(w1, selected_compare_lengths)
                 p95_2 = _calc_p95_radius(w2, selected_compare_lengths)
-                rows.append({"label": "P95 Radius", "v1": p95_1, "v2": p95_2, "s1": _fmt(p95_1), "s2": _fmt(p95_2), "higher_is_better": True})
+                rows.append({"label": "P95 Radius", "v1": p95_1, "v2": p95_2, "s1": _fmt(p95_1), "s2": _fmt(p95_2), "higher_is_better": True, "help": "A higher p95 means batter plays more difficult shots."})
                 _render_compare_rows("360 Ability", batter1, batter2, rows, "cmp_360")
 
             if "Zone Strengths" in compare_on:
@@ -1473,7 +1516,7 @@ if active_view == "Compare":
                     for zn in ["Straight", "Leg", "Off", "Behind"]:
                         v1 = float(zp1.get(rc, {}).get(zn, 0.0))
                         v2 = float(zp2.get(rc, {}).get(zn, 0.0))
-                        rows.append({"label": f"{rc.title()} - {zn}", "v1": v1, "v2": v2, "s1": _fmt(v1, "%"), "s2": _fmt(v2, "%"), "higher_is_better": True})
+                        rows.append({"label": f"{rc.title()} - {zn}", "v1": v1, "v2": v2, "s1": _fmt(v1, "%"), "s2": _fmt(v2, "%"), "higher_is_better": True, "help": f"{rc.title()} runs share % in {zn.lower()} region."})
                 _render_compare_rows("Zone Strengths (%)", batter1, batter2, rows, "cmp_zone")
 
             if "Shot Strengths" in compare_on:
@@ -1483,25 +1526,25 @@ if active_view == "Compare":
                 for sh in sorted(set(sp1.keys()).union(sp2.keys())):
                     v1 = float(sp1.get(sh, 0.0))
                     v2 = float(sp2.get(sh, 0.0))
-                    rows.append({"label": sh, "v1": v1, "v2": v2, "s1": _fmt(v1, "%"), "s2": _fmt(v2, "%"), "higher_is_better": True})
+                    rows.append({"label": sh, "v1": v1, "v2": v2, "s1": _fmt(v1, "%"), "s2": _fmt(v2, "%"), "higher_is_better": True, "help": f"Runs share % playing {sh}."})
                 _render_compare_rows("Shot Strengths (%)", batter1, batter2, rows, "cmp_shots")
 
             if "Lengthwise Intent" in compare_on:
                 li1 = _extract_intrel_by_length(i1, "intent_by_length", selected_compare_lengths)
                 li2 = _extract_intrel_by_length(i2, "intent_by_length", selected_compare_lengths)
-                rows = [{"label": ln, "v1": li1.get(ln, 0.0), "v2": li2.get(ln, 0.0), "s1": _fmt(li1.get(ln, 0.0), "", 3), "s2": _fmt(li2.get(ln, 0.0), "", 3), "higher_is_better": True} for ln in selected_compare_lengths]
+                rows = [{"label": ln, "v1": li1.get(ln, 0.0), "v2": li2.get(ln, 0.0), "s1": _fmt(li1.get(ln, 0.0), "", 3), "s2": _fmt(li2.get(ln, 0.0), "", 3), "higher_is_better": True, "help": f"A measure of intent vs {ln}."} for ln in selected_compare_lengths]
                 _render_compare_rows("Lengthwise Intent", batter1, batter2, rows, "cmp_intent")
 
             if "Lengthwise Reliability" in compare_on:
                 lr1 = _extract_intrel_by_length(i1, "reliability_by_length", selected_compare_lengths)
                 lr2 = _extract_intrel_by_length(i2, "reliability_by_length", selected_compare_lengths)
-                rows = [{"label": ln, "v1": lr1.get(ln, 0.0), "v2": lr2.get(ln, 0.0), "s1": _fmt(lr1.get(ln, 0.0), "", 3), "s2": _fmt(lr2.get(ln, 0.0), "", 3), "higher_is_better": True} for ln in selected_compare_lengths]
+                rows = [{"label": ln, "v1": lr1.get(ln, 0.0), "v2": lr2.get(ln, 0.0), "s1": _fmt(lr1.get(ln, 0.0), "", 3), "s2": _fmt(lr2.get(ln, 0.0), "", 3), "higher_is_better": True, "help": f"A measure of reliability vs {ln}."} for ln in selected_compare_lengths]
                 _render_compare_rows("Lengthwise Reliability", batter1, batter2, rows, "cmp_rel")
 
             if "Lengthwise Int-Rel" in compare_on:
                 lir1 = _extract_intrel_by_length(i1, "intrel_by_length", selected_compare_lengths)
                 lir2 = _extract_intrel_by_length(i2, "intrel_by_length", selected_compare_lengths)
-                rows = [{"label": ln, "v1": lir1.get(ln, 0.0), "v2": lir2.get(ln, 0.0), "s1": _fmt(lir1.get(ln, 0.0), "", 3), "s2": _fmt(lir2.get(ln, 0.0), "", 3), "higher_is_better": True} for ln in selected_compare_lengths]
+                rows = [{"label": ln, "v1": lir1.get(ln, 0.0), "v2": lir2.get(ln, 0.0), "s1": _fmt(lir1.get(ln, 0.0), "", 3), "s2": _fmt(lir2.get(ln, 0.0), "", 3), "higher_is_better": True, "help": f"A combined measure of intent and reliability vs {ln}."} for ln in selected_compare_lengths]
                 _render_compare_rows("Lengthwise Int-Rel", batter1, batter2, rows, "cmp_intrel")
     else:
         st.info("Set compare filters in sidebar and click **Compare**.")
