@@ -1466,16 +1466,43 @@ if active_view == "Compare":
             st.session_state["cmp_b1"] = d1 if d1 in compare_batters else compare_batters[0]
             b2_opts_init = [b for b in compare_batters if b != st.session_state["cmp_b1"]]
             st.session_state["cmp_b2"] = d2 if d2 in b2_opts_init else (b2_opts_init[0] if b2_opts_init else compare_batters[0])
+            st.session_state["cmp_b2_widget"] = st.session_state["cmp_b2"]
+            st.session_state["cmp_prev_b1"] = st.session_state["cmp_b1"]
             st.session_state["cmp_mode_initialized"] = current_mode
 
+        prev_b1 = st.session_state.get("cmp_prev_b1", st.session_state.get("cmp_b1"))
         batter1 = st.selectbox("Batter 1", compare_batters, key="cmp_b1")
         batter2_options = [b for b in compare_batters if b != batter1]
         if not batter2_options:
             st.error("No valid second batter options.")
             st.stop()
+
+        # If Batter 1 changed, preserve Batter 2 when possible.
+        if prev_b1 != batter1:
+            current_b2 = st.session_state.get("cmp_b2")
+            widget_b2 = st.session_state.get("cmp_b2_widget")
+            if current_b2 == batter1 and prev_b1 in batter2_options and prev_b1 != batter1:
+                preferred_b2 = prev_b1
+            elif current_b2 in batter2_options:
+                preferred_b2 = current_b2
+            elif widget_b2 in batter2_options:
+                preferred_b2 = widget_b2
+            else:
+                preferred_b2 = batter2_options[0]
+            st.session_state["cmp_b2"] = preferred_b2
+            st.session_state["cmp_b2_widget"] = preferred_b2
+
         if st.session_state.get("cmp_b2") not in batter2_options:
             st.session_state["cmp_b2"] = batter2_options[0]
-        batter2 = st.selectbox("Batter 2", batter2_options, key="cmp_b2")
+        if st.session_state.get("cmp_b2_widget") not in batter2_options:
+            st.session_state["cmp_b2_widget"] = st.session_state["cmp_b2"]
+        batter2 = st.selectbox(
+            "Batter 2",
+            batter2_options,
+            key="cmp_b2_widget",
+        )
+        st.session_state["cmp_b2"] = batter2
+        st.session_state["cmp_prev_b1"] = batter1
 
         bk1 = set(fetch_bowl_kinds(current_mode, batter1))
         bk2 = set(fetch_bowl_kinds(current_mode, batter2))
