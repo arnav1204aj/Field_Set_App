@@ -303,125 +303,135 @@ def _render_compare_rows(
     key_prefix: str,
 ) -> None:
     st.markdown(
-        f"""
-        <div style="
-            margin-top: 1.1rem;
-            margin-bottom: 0.8rem;
-            padding: 0.85rem 1rem;
-            border-radius: 12px;
-            border: 1px solid rgba(252,165,165,0.35);
-            background: linear-gradient(135deg, rgba(153, 27, 27, 0.24) 0%, rgba(220, 38, 38, 0.16) 100%);
-        ">
-            <div style="
+        """
+        <style>
+            .cmp-wrap { margin-top: 1.1rem; }
+            .cmp-title {
+                margin-bottom: 0.8rem;
+                padding: 0.85rem 1rem;
+                border-radius: 12px;
+                border: 1px solid rgba(255,255,255,0.22);
+                background: linear-gradient(90deg, rgba(59,130,246,0.30) 0%, rgba(245,158,11,0.30) 100%);
                 font-size: 1.05rem;
                 font-weight: 800;
                 letter-spacing: 0.5px;
+                color: #e2e8f0;
+                text-transform: uppercase;
+            }
+            .cmp-head-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 1rem;
+                margin-bottom: 0.75rem;
+            }
+            .cmp-head {
+                color: white;
+                font-size: 1.08rem;
+                font-weight: 700;
+                padding: 0.45rem 0.65rem;
+                border-radius: 8px;
+            }
+            .cmp-head-1 {
+                border-left: 3px solid #60a5fa;
+                background: rgba(96,165,250,0.14);
+            }
+            .cmp-head-2 {
+                border-left: 3px solid #f59e0b;
+                background: rgba(245,158,11,0.14);
+            }
+            .cmp-row {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 1rem;
+                margin-bottom: 0.35rem;
+            }
+            .cmp-cell {
+                padding: 0.7rem 0.85rem;
+                border: 1px solid rgba(255,255,255,0.12);
+                border-radius: 10px;
+                background: rgba(255,255,255,0.03);
+            }
+            .cmp-cell-1 {
+                border-left: 4px solid rgba(96,165,250,0.95);
+                background: linear-gradient(135deg, rgba(96,165,250,0.18) 0%, rgba(255,255,255,0.03) 70%);
+            }
+            .cmp-cell-2 {
+                border-left: 4px solid rgba(245,158,11,0.95);
+                background: linear-gradient(135deg, rgba(245,158,11,0.18) 0%, rgba(255,255,255,0.03) 70%);
+            }
+            .cmp-label {
+                font-size: 0.82rem;
                 color: #fca5a5;
                 text-transform: uppercase;
-            ">
-                {title}
-            </div>
+                letter-spacing: 0.5px;
+                margin-bottom: 0.2rem;
+            }
+            .cmp-val {
+                font-size: 1.22rem;
+                font-weight: 700;
+                margin-top: 0.2rem;
+            }
+            .cmp-info details { display: inline-block; margin-left: 10px; vertical-align: middle; position: relative; }
+            .cmp-info summary {
+                list-style: none; cursor: pointer; color: #67e8f9;
+                font-size: 0.86rem; font-weight: 800; display: inline-block; user-select: none;
+            }
+            .cmp-info-pop {
+                position: absolute; top: 22px; left: 0; z-index: 9999; width: 260px;
+                padding: 6px 8px; border-radius: 8px; border: 1px solid rgba(103,232,249,0.45);
+                background: rgba(2,6,23,0.92); color: #e2e8f0; font-size: 0.78rem; line-height: 1.35;
+                text-transform: none; letter-spacing: 0; font-weight: 500; box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+            }
+            @media (max-width: 768px) {
+                .cmp-head-grid { grid-template-columns: 1fr; gap: 0.45rem; }
+                .cmp-row { grid-template-columns: 1fr; gap: 0.45rem; }
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(f'<div class="cmp-wrap"><div class="cmp-title">{title}</div></div>', unsafe_allow_html=True)
+    st.markdown(
+        f"""
+        <div class="cmp-head-grid">
+            <div class="cmp-head cmp-head-1">{left_label}</div>
+            <div class="cmp-head cmp-head-2">{right_label}</div>
         </div>
         """,
         unsafe_allow_html=True,
     )
-    c1, c2 = st.columns(2, gap="large")
-    with c1:
-        st.markdown(
-            f"""
-            <div style="
-                color: white;
-                font-size: 1.08rem;
-                font-weight: 700;
-                margin-bottom: 0.75rem;
-                padding: 0.45rem 0.65rem;
-                border-left: 3px solid #f87171;
-                background: rgba(248,113,113,0.10);
-                border-radius: 8px;
-            ">{left_label}</div>
-            """,
-            unsafe_allow_html=True,
-        )
-    with c2:
-        st.markdown(
-            f"""
-            <div style="
-                color: white;
-                font-size: 1.08rem;
-                font-weight: 700;
-                margin-bottom: 0.75rem;
-                padding: 0.45rem 0.65rem;
-                border-left: 3px solid #f87171;
-                background: rgba(248,113,113,0.10);
-                border-radius: 8px;
-            ">{right_label}</div>
-            """,
-            unsafe_allow_html=True,
-        )
 
-    for idx, r in enumerate(rows):
+    for r in rows:
         color1, color2 = _cmp_class(float(r["v1"]), float(r["v2"]), bool(r.get("higher_is_better", True)))
         help_text = (r.get("help") or "").replace('"', "&quot;")
         info_html = (
             f"""
-            <details style="display:inline-block; margin-left:10px; vertical-align:middle; position:relative;">
-                <summary
-                    title="{help_text}"
-                    style="
-                        list-style:none;
-                        cursor:pointer;
-                        color:#67e8f9;
-                        font-size:0.86rem;
-                        font-weight:800;
-                        display:inline-block;
-                        user-select:none;
-                    "
-                >ⓘ</summary>
-                <div style="
-                    position:absolute;
-                    top:22px;
-                    left:0;
-                    z-index:9999;
-                    width:260px;
-                    padding:6px 8px;
-                    border-radius:8px;
-                    border:1px solid rgba(103,232,249,0.45);
-                    background:rgba(2,6,23,0.92);
-                    color:#e2e8f0;
-                    font-size:0.78rem;
-                    line-height:1.35;
-                    text-transform:none;
-                    letter-spacing:0;
-                    font-weight:500;
-                    box-shadow:0 10px 24px rgba(0,0,0,0.35);
-                ">{help_text}</div>
-            </details>
+            <span class="cmp-info">
+                <details>
+                    <summary title="{help_text}">?</summary>
+                    <div class="cmp-info-pop">{help_text}</div>
+                </details>
+            </span>
             """
             if help_text else ""
         )
-        row_c1, row_c2 = st.columns(2, gap="large")
-        with row_c1:
-            st.markdown(
-                f"""
-                <div style="padding:0.7rem 0.85rem; border:1px solid rgba(255,255,255,0.12); border-radius:10px; background:rgba(255,255,255,0.03); margin-bottom:0.25rem;">
-                    <div style="font-size:0.82rem; color:#fca5a5; text-transform:uppercase; letter-spacing:0.5px;">{r['label']}{info_html}</div>
-                    <div style="font-size:1.22rem; font-weight:700; color:{color1}; margin-top:0.2rem;">{r['s1']}</div>
+        st.markdown(
+            f"""
+            <div class="cmp-row">
+                <div class="cmp-cell cmp-cell-1">
+                    <div class="cmp-label">{r['label']}{info_html}</div>
+                    <div class="cmp-val" style="color:{color1};">{r['s1']}</div>
                 </div>
-                """,
-                unsafe_allow_html=True,
-            )
-        with row_c2:
-            st.markdown(
-                f"""
-                <div style="padding:0.7rem 0.85rem; border:1px solid rgba(255,255,255,0.12); border-radius:10px; background:rgba(255,255,255,0.03); margin-bottom:0.25rem;">
-                    <div style="font-size:0.82rem; color:#fca5a5; text-transform:uppercase; letter-spacing:0.5px;">{r['label']}{info_html}</div>
-                    <div style="font-size:1.22rem; font-weight:700; color:{color2}; margin-top:0.2rem;">{r['s2']}</div>
+                <div class="cmp-cell cmp-cell-2">
+                    <div class="cmp-label">{r['label']}{info_html}</div>
+                    <div class="cmp-val" style="color:{color2};">{r['s2']}</div>
                 </div>
-                """,
-                unsafe_allow_html=True,
-            )
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
     st.markdown("<div style='height:0.6rem;'></div>", unsafe_allow_html=True)
-
 
 def _aggregate_zone_perc(zone_data: Dict[str, Any], lengths: List[str]) -> Dict[str, Dict[str, float]]:
     dict_360 = zone_data.get("dict_360_selected", {}) if zone_data else {}
@@ -1582,6 +1592,8 @@ if active_view == "Information":
          Mens ODIs - since 2014, Mens T20s - since 2015, Womens T20s - since 2020                
     </div>
     """, unsafe_allow_html=True)
+
+
 
 
 
