@@ -1436,12 +1436,19 @@ if active_view == "Compare":
                 st.error("Need at least two batters to compare.")
                 st.stop()
 
-            d1, d2 = DEFAULT_COMPARE_BATTERS.get(current_mode, (compare_batters[0], compare_batters[1]))
-            idx1 = compare_batters.index(d1) if d1 in compare_batters else 0
-            batter1 = st.selectbox("Batter 1", compare_batters, index=idx1, key="cmp_b1")
+            # Initialize compare defaults only when mode changes; preserve manual user selections otherwise.
+            if st.session_state.get("cmp_mode_initialized") != current_mode:
+                d1, d2 = DEFAULT_COMPARE_BATTERS.get(current_mode, (compare_batters[0], compare_batters[1]))
+                st.session_state["cmp_b1"] = d1 if d1 in compare_batters else compare_batters[0]
+                b2_opts_init = [b for b in compare_batters if b != st.session_state["cmp_b1"]]
+                st.session_state["cmp_b2"] = d2 if d2 in b2_opts_init else (b2_opts_init[0] if b2_opts_init else compare_batters[0])
+                st.session_state["cmp_mode_initialized"] = current_mode
+
+            batter1 = st.selectbox("Batter 1", compare_batters, key="cmp_b1")
             batter2_options = [b for b in compare_batters if b != batter1]
-            idx2 = batter2_options.index(d2) if d2 in batter2_options else 0
-            batter2 = st.selectbox("Batter 2", batter2_options, index=idx2, key="cmp_b2")
+            if st.session_state.get("cmp_b2") not in batter2_options:
+                st.session_state["cmp_b2"] = batter2_options[0] if batter2_options else batter1
+            batter2 = st.selectbox("Batter 2", batter2_options, key="cmp_b2")
 
             bk1 = set(fetch_bowl_kinds(current_mode, batter1))
             bk2 = set(fetch_bowl_kinds(current_mode, batter2))
