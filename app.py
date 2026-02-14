@@ -1481,7 +1481,7 @@ if active_view == "Compare":
         elif not outfielders_compare:
             st.warning("No common outfielder count available for this filter.")
         else:
-            st.markdown('Click ⓘ for small metric explainers')
+            st.markdown('Click ? for small metric explainers')
 
             z1 = fetch_zone_strength(current_mode, batter1, bowl_kind_compare, selected_compare_lengths) or {}
             z2 = fetch_zone_strength(current_mode, batter2, bowl_kind_compare, selected_compare_lengths) or {}
