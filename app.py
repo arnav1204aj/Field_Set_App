@@ -341,17 +341,17 @@ def _render_compare_rows(
                 border-left: 3px solid #f59e0b;
                 background: rgba(245,158,11,0.14);
             }
-            .cmp-row {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 1rem;
-                margin-bottom: 0.35rem;
-            }
             .cmp-cell {
                 padding: 0.7rem 0.85rem;
                 border: 1px solid rgba(255,255,255,0.12);
                 border-radius: 10px;
                 background: rgba(255,255,255,0.03);
+            }
+            .cmp-pair {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 1rem;
+                margin-bottom: 0.35rem;
             }
             .cmp-cell-1 {
                 border-left: 4px solid rgba(96,165,250,0.95);
@@ -399,7 +399,9 @@ def _render_compare_rows(
             }
             @media (max-width: 768px) {
                 .cmp-head-grid { grid-template-columns: 1fr; gap: 0.45rem; }
-                .cmp-row { grid-template-columns: 1fr; gap: 0.45rem; }
+                .cmp-pair { grid-template-columns: 1fr; gap: 0; margin-bottom: 0.75rem; }
+                .cmp-cell-pair-1 { margin-bottom: 0 !important; }
+                .cmp-cell-pair-2 { margin-top: 0 !important; margin-bottom: 0 !important; }
             }
         </style>
         """,
@@ -435,29 +437,17 @@ def _render_compare_rows(
         meta_right = r.get("m2", r.get("meta", ""))
         meta_html_left = f'<span class="cmp-subval">({meta_left})</span>' if meta_left else ""
         meta_html_right = f'<span class="cmp-subval">({meta_right})</span>' if meta_right else ""
-        c1, c2 = st.columns(2, gap="medium")
-        with c1:
-            st.markdown(
-                f"""
-                <div class="cmp-cell cmp-cell-1">
-                    <div class="cmp-label">{r['label']}{info_html}</div>
-                    <div class="cmp-val-line">
-                        <span class="cmp-val" style="color:{color1};">{r['s1']}</span>
-                        {meta_html_left}</div></div>
-                """,
-                unsafe_allow_html=True,
-            )
-        with c2:
-            st.markdown(
-                f"""
-                <div class="cmp-cell cmp-cell-2">
-                    <div class="cmp-label">{r['label']}</div>
-                    <div class="cmp-val-line">
-                        <span class="cmp-val" style="color:{color2};">{r['s2']}</span>
-                        {meta_html_right}</div></div>
-                """,
-                unsafe_allow_html=True,
-            )
+        st.markdown(
+            f"""
+            <div class="cmp-pair"> <div class="cmp-cell cmp-cell-1 cmp-cell-pair-1"><div class="cmp-label">{r['label']}{info_html}</div>
+            <div class="cmp-val-line"><span class="cmp-val" style="color:{color1};">{r['s1']}</span>
+            {meta_html_left} </div> </div>
+                <div class="cmp-cell cmp-cell-2 cmp-cell-pair-2"><div class="cmp-label">{r['label']}</div>
+                <div class="cmp-val-line"><span class="cmp-val" style="color:{color2};">{r['s2']}</span>
+                {meta_html_right}</div></div> </div>
+            """,
+            unsafe_allow_html=True,
+        )
     st.markdown("<div style='height:0.6rem;'></div>", unsafe_allow_html=True)
 
 def _aggregate_zone_perc(zone_data: Dict[str, Any], lengths: List[str], value_key: str = "runs") -> Dict[str, Dict[str, float]]:
