@@ -1542,7 +1542,25 @@ def plot_intrel_pitch(
     if not data:
         raise ValueError(f"No data for {batter} ({bowl_kind})")
 
-    length_data = data[metric]
+    length_data = data.get(metric, {})
+    if not isinstance(length_data, dict) or not length_data:
+        raise ValueError(f"No metric data for {metric}")
+
+    def _safe_float(x):
+        try:
+            if x is None:
+                return np.nan
+            v = float(x)
+            return v if np.isfinite(v) else np.nan
+        except Exception:
+            return np.nan
+
+    def _unpack_pair(v):
+        if isinstance(v, (list, tuple)) and len(v) >= 2:
+            return _safe_float(v[0]), int(v[1] or 0)
+        if isinstance(v, (int, float, np.floating)):
+            return _safe_float(v), 0
+        return np.nan, 0
 
     # --- figure ---
     fig, ax = plt.subplots(figsize=(4.5, 6))
@@ -1577,10 +1595,11 @@ def plot_intrel_pitch(
 
 
     # --- normalize int-rel for colors ---
-    intrels = [
-        v[0] for v in length_data.values()
-        if not np.isnan(v[0]) and v[1] >= min_balls
-    ]
+    intrels = []
+    for v in length_data.values():
+        iv, balls = _unpack_pair(v)
+        if not np.isnan(iv) and balls >= min_balls:
+            intrels.append(iv)
 
     if not intrels:
         raise ValueError("No lengths with sufficient balls")
@@ -1606,7 +1625,7 @@ def plot_intrel_pitch(
     for length, (y0, y1) in LENGTH_ZONES.items():
         if length not in lengths:
          continue 
-        intrel, balls = length_data.get(length, (np.nan, 0))
+        intrel, balls = _unpack_pair(length_data.get(length, (np.nan, 0)))
         if balls < min_balls or np.isnan(intrel):
             continue
 
@@ -1685,6 +1704,24 @@ def plot_intrel_pitch_avg(
 
     sr_data = data.get("othsr", {})
     con_data = data.get("othcon", {})
+    if not isinstance(sr_data, dict) or not isinstance(con_data, dict):
+        raise ValueError("Invalid avg metric payload")
+
+    def _safe_float(x):
+        try:
+            if x is None:
+                return np.nan
+            v = float(x)
+            return v if np.isfinite(v) else np.nan
+        except Exception:
+            return np.nan
+
+    def _unpack_pair(v):
+        if isinstance(v, (list, tuple)) and len(v) >= 2:
+            return _safe_float(v[0]), int(v[1] or 0)
+        if isinstance(v, (int, float, np.floating)):
+            return _safe_float(v), 0
+        return np.nan, 0
 
     # --- figure ---
     fig, ax = plt.subplots(figsize=(4.5, 6))
@@ -1733,8 +1770,8 @@ def plot_intrel_pitch_avg(
         if length not in lengths:
             continue
 
-        sr, balls_sr = sr_data.get(length, (np.nan, 0))
-        con, balls_con = con_data.get(length, (np.nan, 0))
+        sr, balls_sr = _unpack_pair(sr_data.get(length, (np.nan, 0)))
+        con, balls_con = _unpack_pair(con_data.get(length, (np.nan, 0)))
 
         balls = min(balls_sr, balls_con)
         if balls < min_balls or np.isnan(sr) or np.isnan(con):
