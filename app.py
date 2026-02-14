@@ -1426,8 +1426,6 @@ if active_view == "Compare":
     with st.sidebar:
         st.markdown('<p class="section-header">Compare Filters</p>', unsafe_allow_html=True)
         with st.form(key="compare_form"):
-            compare_submit = st.form_submit_button("Compare", use_container_width=True)
-
             compare_batters = fetch_batters(current_mode)
             if not compare_batters:
                 st.error("No batters available for selected mode.")
@@ -1446,9 +1444,11 @@ if active_view == "Compare":
 
             batter1 = st.selectbox("Batter 1", compare_batters, key="cmp_b1")
             batter2_options = [b for b in compare_batters if b != batter1]
-            if st.session_state.get("cmp_b2") not in batter2_options:
-                st.session_state["cmp_b2"] = batter2_options[0] if batter2_options else batter1
-            batter2 = st.selectbox("Batter 2", batter2_options, key="cmp_b2")
+            if not batter2_options:
+                st.error("No valid second batter options.")
+                st.stop()
+            idx2 = batter2_options.index(st.session_state["cmp_b2"]) if st.session_state.get("cmp_b2") in batter2_options else 0
+            batter2 = st.selectbox("Batter 2", batter2_options, index=idx2, key="cmp_b2")
 
             bk1 = set(fetch_bowl_kinds(current_mode, batter1))
             bk2 = set(fetch_bowl_kinds(current_mode, batter2))
@@ -1479,6 +1479,7 @@ if active_view == "Compare":
                 default=COMPARE_SECTIONS,
                 key="cmp_on",
             )
+            compare_submit = st.form_submit_button("Compare", use_container_width=True)
 
     if compare_submit:
         if not bowl_kind_compare:
