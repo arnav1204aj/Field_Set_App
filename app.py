@@ -317,6 +317,7 @@ def _render_compare_rows(
                 letter-spacing: 0.5px;
                 color: #e2e8f0;
                 text-transform: uppercase;
+                text-align: center;
             }
             .cmp-head-grid {
                 display: grid;
@@ -330,6 +331,7 @@ def _render_compare_rows(
                 font-weight: 700;
                 padding: 0.45rem 0.65rem;
                 border-radius: 8px;
+                text-align: center;
             }
             .cmp-head-1 {
                 border-left: 3px solid #60a5fa;
@@ -365,11 +367,24 @@ def _render_compare_rows(
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
                 margin-bottom: 0.2rem;
+                text-align: center;
             }
             .cmp-val {
                 font-size: 1.22rem;
                 font-weight: 700;
+                text-align: center;
+            }
+            .cmp-val-line {
                 margin-top: 0.2rem;
+                display: flex;
+                align-items: baseline;
+                justify-content: center;
+                gap: 0.4rem;
+            }
+            .cmp-subval {
+                font-size: 0.82rem;
+                color: #ffffff;
+                opacity: 0.95;
             }
             .cmp-info details { display: inline-block; margin-left: 10px; vertical-align: middle; position: relative; }
             .cmp-info summary {
@@ -410,33 +425,46 @@ def _render_compare_rows(
             <span class="cmp-info">
                 <details>
                     <summary title="{help_text}">?</summary>
-                    <div class="cmp-info-pop">{help_text}</div>
+                    <span class="cmp-info-pop">{help_text}</span>
                 </details>
             </span>
             """
             if help_text else ""
         )
-        st.markdown(
-            f"""
-            <div class="cmp-row">
+        meta_left = r.get("m1", r.get("meta", ""))
+        meta_right = r.get("m2", r.get("meta", ""))
+        meta_html_left = f'<span class="cmp-subval">({meta_left})</span>' if meta_left else ""
+        meta_html_right = f'<span class="cmp-subval">({meta_right})</span>' if meta_right else ""
+        c1, c2 = st.columns(2, gap="medium")
+        with c1:
+            st.markdown(
+                f"""
                 <div class="cmp-cell cmp-cell-1">
                     <div class="cmp-label">{r['label']}{info_html}</div>
-                    <div class="cmp-val" style="color:{color1};">{r['s1']}</div>
-                </div>
+                    <div class="cmp-val-line">
+                        <span class="cmp-val" style="color:{color1};">{r['s1']}</span>
+                        {meta_html_left}</div></div>
+                """,
+                unsafe_allow_html=True,
+            )
+        with c2:
+            st.markdown(
+                f"""
                 <div class="cmp-cell cmp-cell-2">
                     <div class="cmp-label">{r['label']}</div>
-                    <div class="cmp-val" style="color:{color2};">{r['s2']}</div>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+                    <div class="cmp-val-line">
+                        <span class="cmp-val" style="color:{color2};">{r['s2']}</span>
+                        {meta_html_right}</div></div>
+                """,
+                unsafe_allow_html=True,
+            )
     st.markdown("<div style='height:0.6rem;'></div>", unsafe_allow_html=True)
 
-def _aggregate_zone_perc(zone_data: Dict[str, Any], lengths: List[str]) -> Dict[str, Dict[str, float]]:
+def _aggregate_zone_perc(zone_data: Dict[str, Any], lengths: List[str], value_key: str = "runs") -> Dict[str, Dict[str, float]]:
     dict_360 = zone_data.get("dict_360_selected", {}) if zone_data else {}
     weights = zone_data.get("length_weights", {}) if zone_data else {}
     out: Dict[str, Dict[str, float]] = {}
+    suffix = "runs" if value_key == "runs" else "avg_runs"
     for run_class in ["overall", "running", "boundary"]:
         total_runs = 0.0
         zone_vals = {"st": 0.0, "leg": 0.0, "off": 0.0, "bk": 0.0}
@@ -446,7 +474,7 @@ def _aggregate_zone_perc(zone_data: Dict[str, Any], lengths: List[str]) -> Dict[
             t = float(rc.get("total_runs", 0) or 0)
             total_runs += w * t
             for z in zone_vals:
-                zone_vals[z] += w * float(rc.get(f"{z}_runs", 0) or 0)
+                zone_vals[z] += w * float(rc.get(f"{z}_{suffix}", 0) or 0)
         denom = total_runs if total_runs > 0 else 1.0
         out[run_class] = {
             "Straight": 100.0 * zone_vals["st"] / denom,
@@ -457,7 +485,7 @@ def _aggregate_zone_perc(zone_data: Dict[str, Any], lengths: List[str]) -> Dict[
     return out
 
 
-def _aggregate_shot_perc(shot_data: Dict[str, Any], lengths: List[str]) -> Dict[str, float]:
+def _aggregate_shot_perc(shot_data: Dict[str, Any], lengths: List[str], value_key: str = "runs") -> Dict[str, float]:
     shot_selected = shot_data.get("shot_profile_selected", {}) if shot_data else {}
     weights = shot_data.get("length_weights", {}) if shot_data else {}
     agg: Dict[str, float] = {}
@@ -466,7 +494,7 @@ def _aggregate_shot_perc(shot_data: Dict[str, Any], lengths: List[str]) -> Dict[
         ln_block = shot_selected.get(ln, {}) if isinstance(shot_selected, dict) else {}
         for shot, vals in (ln_block or {}).items():
             if isinstance(vals, dict):
-                agg[shot] = agg.get(shot, 0.0) + w * float(vals.get("runs", 0) or 0)
+                agg[shot] = agg.get(shot, 0.0) + w * float(vals.get(value_key, 0) or 0)
     total = sum(agg.values())
     if total <= 0:
         return {k: 0.0 for k in agg}
@@ -1488,7 +1516,7 @@ if active_view == "Compare":
         elif not outfielders_compare:
             st.warning("No common outfielder count available for this filter.")
         else:
-            st.markdown('Click ? for small metric explainers')
+            st.markdown('Click ? for small metric explainers. The values in brackets are global averages for 360 ability metrics and average batter values (if an average batter plays the same delivery characteristics and is of the same handedness then what will be the values) for zone and shot strengths. The average value for intent, reliability and int-rel is 1.')
 
             z1 = fetch_zone_strength(current_mode, batter1, bowl_kind_compare, selected_compare_lengths) or {}
             z2 = fetch_zone_strength(current_mode, batter2, bowl_kind_compare, selected_compare_lengths) or {}
@@ -1504,22 +1532,56 @@ if active_view == "Compare":
             if "360 Ability" in compare_on:
                 d1 = z1.get("dict_360_selected", {})
                 d2 = z2.get("dict_360_selected", {})
+                dg = z1.get("avg_360_selected", {})
                 rows = []
                 for rc, lbl in [("running", "Running 360"), ("boundary", "Boundary 360"), ("overall", "Overall 360")]:
                     v1 = _avg([d1.get(ln, {}).get(rc, {}).get("360_score", 0) for ln in selected_compare_lengths])
                     v2 = _avg([d2.get(ln, {}).get(rc, {}).get("360_score", 0) for ln in selected_compare_lengths])
+                    vg = _avg([dg.get(ln, {}).get(rc, {}).get("360_score", 0) for ln in selected_compare_lengths])
                     help_text = {
                         "running": "360 degree score of running class runs.",
                         "boundary": "360 degree score of boundary class runs.",
                         "overall": "360 degree score of overall runs.",
                     }[rc]
-                    rows.append({"label": lbl, "v1": v1, "v2": v2, "s1": _fmt(v1), "s2": _fmt(v2), "higher_is_better": True, "help": help_text})
+                    rows.append({
+                        "label": lbl,
+                        "v1": v1,
+                        "v2": v2,
+                        "s1": _fmt(v1),
+                        "s2": _fmt(v2),
+                        "m1": _fmt(vg),
+                        "m2": _fmt(vg),
+                        "higher_is_better": True,
+                        "help": help_text,
+                    })
                 rp1 = float(p1.get("batter_running", 0) or 0)
                 rp2 = float(p2.get("batter_running", 0) or 0)
                 bp1 = float(p1.get("batter_boundary", 0) or 0)
                 bp2 = float(p2.get("batter_boundary", 0) or 0)
-                rows.append({"label": "Running Protection", "v1": rp1, "v2": rp2, "s1": _fmt(rp1, "%"), "s2": _fmt(rp2, "%"), "higher_is_better": False, "help": "% of running runs saved by optimal field (lower is better)."})
-                rows.append({"label": "Boundary Protection", "v1": bp1, "v2": bp2, "s1": _fmt(bp1, "%"), "s2": _fmt(bp2, "%"), "higher_is_better": False, "help": "% of boundary runs saved by optimal field (lower is better)."})
+                rg = float(p1.get("global_running", p2.get("global_running", 0)) or 0)
+                bg = float(p1.get("global_boundary", p2.get("global_boundary", 0)) or 0)
+                rows.append({
+                    "label": "Running Protection",
+                    "v1": rp1,
+                    "v2": rp2,
+                    "s1": _fmt(rp1, "%"),
+                    "s2": _fmt(rp2, "%"),
+                    "m1": _fmt(rg, "%"),
+                    "m2": _fmt(rg, "%"),
+                    "higher_is_better": False,
+                    "help": "% of running runs saved by optimal field (lower is better).",
+                })
+                rows.append({
+                    "label": "Boundary Protection",
+                    "v1": bp1,
+                    "v2": bp2,
+                    "s1": _fmt(bp1, "%"),
+                    "s2": _fmt(bp2, "%"),
+                    "m1": _fmt(bg, "%"),
+                    "m2": _fmt(bg, "%"),
+                    "higher_is_better": False,
+                    "help": "% of boundary runs saved by optimal field (lower is better).",
+                })
                 p95_1 = _calc_p95_radius(w1, selected_compare_lengths)
                 p95_2 = _calc_p95_radius(w2, selected_compare_lengths)
                 rows.append({"label": "P95 Radius", "v1": p95_1, "v2": p95_2, "s1": _fmt(p95_1), "s2": _fmt(p95_2), "higher_is_better": True, "help": "A higher p95 means batter plays more difficult shots."})
@@ -1528,22 +1590,50 @@ if active_view == "Compare":
             if "Zone Strengths" in compare_on:
                 zp1 = _aggregate_zone_perc(z1, selected_compare_lengths)
                 zp2 = _aggregate_zone_perc(z2, selected_compare_lengths)
+                zp1_avg = _aggregate_zone_perc(z1, selected_compare_lengths, value_key="avg_runs")
+                zp2_avg = _aggregate_zone_perc(z2, selected_compare_lengths, value_key="avg_runs")
                 rows = []
                 for rc in ["overall", "running", "boundary"]:
                     for zn in ["Straight", "Leg", "Off", "Behind"]:
                         v1 = float(zp1.get(rc, {}).get(zn, 0.0))
                         v2 = float(zp2.get(rc, {}).get(zn, 0.0))
-                        rows.append({"label": f"{rc.title()} - {zn}", "v1": v1, "v2": v2, "s1": _fmt(v1, "%"), "s2": _fmt(v2, "%"), "higher_is_better": True, "help": f"{rc.title()} runs share % in {zn.lower()} region."})
+                        a1 = float(zp1_avg.get(rc, {}).get(zn, 0.0))
+                        a2 = float(zp2_avg.get(rc, {}).get(zn, 0.0))
+                        rows.append({
+                            "label": f"{rc.title()} - {zn}",
+                            "v1": v1,
+                            "v2": v2,
+                            "s1": _fmt(v1, "%"),
+                            "s2": _fmt(v2, "%"),
+                            "m1": _fmt(a1, "%"),
+                            "m2": _fmt(a2, "%"),
+                            "higher_is_better": True,
+                            "help": f"{rc.title()} runs share % in {zn.lower()} region.",
+                        })
                 _render_compare_rows("Zone Strengths (%)", batter1, batter2, rows, "cmp_zone")
 
             if "Shot Strengths" in compare_on:
                 sp1 = _aggregate_shot_perc(s1, selected_compare_lengths)
                 sp2 = _aggregate_shot_perc(s2, selected_compare_lengths)
+                sp1_avg = _aggregate_shot_perc(s1, selected_compare_lengths, value_key="avg_runs")
+                sp2_avg = _aggregate_shot_perc(s2, selected_compare_lengths, value_key="avg_runs")
                 rows = []
                 for sh in sorted(set(sp1.keys()).union(sp2.keys())):
                     v1 = float(sp1.get(sh, 0.0))
                     v2 = float(sp2.get(sh, 0.0))
-                    rows.append({"label": sh, "v1": v1, "v2": v2, "s1": _fmt(v1, "%"), "s2": _fmt(v2, "%"), "higher_is_better": True, "help": f"Runs share % playing {sh}."})
+                    a1 = float(sp1_avg.get(sh, 0.0))
+                    a2 = float(sp2_avg.get(sh, 0.0))
+                    rows.append({
+                        "label": sh,
+                        "v1": v1,
+                        "v2": v2,
+                        "s1": _fmt(v1, "%"),
+                        "s2": _fmt(v2, "%"),
+                        "m1": _fmt(a1, "%"),
+                        "m2": _fmt(a2, "%"),
+                        "higher_is_better": True,
+                        "help": f"Runs share % playing {sh}.",
+                    })
                 _render_compare_rows("Shot Strengths (%)", batter1, batter2, rows, "cmp_shots")
 
             if "Lengthwise Intent" in compare_on:
