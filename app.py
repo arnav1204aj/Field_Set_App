@@ -424,7 +424,7 @@ def _render_compare_rows(
                     <div class="cmp-val" style="color:{color1};">{r['s1']}</div>
                 </div>
                 <div class="cmp-cell cmp-cell-2">
-                    <div class="cmp-label">{r['label']}{info_html}</div>
+                    <div class="cmp-label">{r['label']}</div>
                     <div class="cmp-val" style="color:{color2};">{r['s2']}</div>
                 </div>
             </div>
