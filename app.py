@@ -1425,61 +1425,60 @@ if active_view == "Analysis":
 if active_view == "Compare":
     with st.sidebar:
         st.markdown('<p class="section-header">Compare Filters</p>', unsafe_allow_html=True)
-        with st.form(key="compare_form"):
-            compare_batters = fetch_batters(current_mode)
-            if not compare_batters:
-                st.error("No batters available for selected mode.")
-                st.stop()
-            if len(compare_batters) < 2:
-                st.error("Need at least two batters to compare.")
-                st.stop()
+        compare_batters = fetch_batters(current_mode)
+        if not compare_batters:
+            st.error("No batters available for selected mode.")
+            st.stop()
+        if len(compare_batters) < 2:
+            st.error("Need at least two batters to compare.")
+            st.stop()
 
-            if st.session_state.get("cmp_mode_initialized") != current_mode:
-                d1, d2 = DEFAULT_COMPARE_BATTERS.get(current_mode, (compare_batters[0], compare_batters[1]))
-                st.session_state["cmp_b1"] = d1 if d1 in compare_batters else compare_batters[0]
-                b2_opts_init = [b for b in compare_batters if b != st.session_state["cmp_b1"]]
-                st.session_state["cmp_b2"] = d2 if d2 in b2_opts_init else (b2_opts_init[0] if b2_opts_init else compare_batters[0])
-                st.session_state["cmp_mode_initialized"] = current_mode
+        if st.session_state.get("cmp_mode_initialized") != current_mode:
+            d1, d2 = DEFAULT_COMPARE_BATTERS.get(current_mode, (compare_batters[0], compare_batters[1]))
+            st.session_state["cmp_b1"] = d1 if d1 in compare_batters else compare_batters[0]
+            b2_opts_init = [b for b in compare_batters if b != st.session_state["cmp_b1"]]
+            st.session_state["cmp_b2"] = d2 if d2 in b2_opts_init else (b2_opts_init[0] if b2_opts_init else compare_batters[0])
+            st.session_state["cmp_mode_initialized"] = current_mode
 
-            batter1 = st.selectbox("Batter 1", compare_batters, key="cmp_b1")
-            batter2_options = [b for b in compare_batters if b != batter1]
-            if not batter2_options:
-                st.error("No valid second batter options.")
-                st.stop()
-            if st.session_state.get("cmp_b2") not in batter2_options:
-                st.session_state["cmp_b2"] = batter2_options[0]
-            batter2 = st.selectbox("Batter 2", batter2_options, key="cmp_b2")
+        batter1 = st.selectbox("Batter 1", compare_batters, key="cmp_b1")
+        batter2_options = [b for b in compare_batters if b != batter1]
+        if not batter2_options:
+            st.error("No valid second batter options.")
+            st.stop()
+        if st.session_state.get("cmp_b2") not in batter2_options:
+            st.session_state["cmp_b2"] = batter2_options[0]
+        batter2 = st.selectbox("Batter 2", batter2_options, key="cmp_b2")
 
-            bk1 = set(fetch_bowl_kinds(current_mode, batter1))
-            bk2 = set(fetch_bowl_kinds(current_mode, batter2))
-            common_bk = sorted(list(bk1.intersection(bk2)))
-            bowl_kind_compare = st.selectbox("Bowl Kind", common_bk, key="cmp_bk") if common_bk else ""
+        bk1 = set(fetch_bowl_kinds(current_mode, batter1))
+        bk2 = set(fetch_bowl_kinds(current_mode, batter2))
+        common_bk = sorted(list(bk1.intersection(bk2)))
+        bowl_kind_compare = st.selectbox("Bowl Kind", common_bk, key="cmp_bk") if common_bk else ""
 
-            l1 = set(fetch_lengths(current_mode, batter1, bowl_kind_compare)) if bowl_kind_compare else set()
-            l2 = set(fetch_lengths(current_mode, batter2, bowl_kind_compare)) if bowl_kind_compare else set()
-            length_order = ['FULL', 'SHORT', 'GOOD_LENGTH', 'SHORT_OF_A_GOOD_LENGTH']
-            common_lengths = [l for l in length_order if l in l1.intersection(l2)]
-            selected_compare_lengths = st.multiselect(
-                "Length",
-                common_lengths,
-                default=[common_lengths[0]] if common_lengths else [],
-                key="cmp_lengths",
-            )
-            if not selected_compare_lengths and common_lengths:
-                selected_compare_lengths = [common_lengths[0]]
+        l1 = set(fetch_lengths(current_mode, batter1, bowl_kind_compare)) if bowl_kind_compare else set()
+        l2 = set(fetch_lengths(current_mode, batter2, bowl_kind_compare)) if bowl_kind_compare else set()
+        length_order = ['FULL', 'SHORT', 'GOOD_LENGTH', 'SHORT_OF_A_GOOD_LENGTH']
+        common_lengths = [l for l in length_order if l in l1.intersection(l2)]
+        selected_compare_lengths = st.multiselect(
+            "Length",
+            common_lengths,
+            default=[common_lengths[0]] if common_lengths else [],
+            key="cmp_lengths",
+        )
+        if not selected_compare_lengths and common_lengths:
+            selected_compare_lengths = [common_lengths[0]]
 
-            o1 = set(fetch_outfielders(current_mode, batter1, bowl_kind_compare, selected_compare_lengths)) if selected_compare_lengths and bowl_kind_compare else set()
-            o2 = set(fetch_outfielders(current_mode, batter2, bowl_kind_compare, selected_compare_lengths)) if selected_compare_lengths and bowl_kind_compare else set()
-            common_outfielders = sorted(list(o1.intersection(o2)), key=lambda x: str(x))
-            outfielders_compare = st.selectbox("Number of Outfielders", common_outfielders, key="cmp_out") if common_outfielders else ""
+        o1 = set(fetch_outfielders(current_mode, batter1, bowl_kind_compare, selected_compare_lengths)) if selected_compare_lengths and bowl_kind_compare else set()
+        o2 = set(fetch_outfielders(current_mode, batter2, bowl_kind_compare, selected_compare_lengths)) if selected_compare_lengths and bowl_kind_compare else set()
+        common_outfielders = sorted(list(o1.intersection(o2)), key=lambda x: str(x))
+        outfielders_compare = st.selectbox("Number of Outfielders", common_outfielders, key="cmp_out") if common_outfielders else ""
 
-            compare_on = st.multiselect(
-                "Compare On",
-                COMPARE_SECTIONS,
-                default=COMPARE_SECTIONS,
-                key="cmp_on",
-            )
-            compare_submit = st.form_submit_button("Compare", use_container_width=True)
+        compare_on = st.multiselect(
+            "Compare On",
+            COMPARE_SECTIONS,
+            default=COMPARE_SECTIONS,
+            key="cmp_on",
+        )
+        compare_submit = st.button("Compare", use_container_width=True, key="cmp_submit_btn")
 
     if compare_submit:
         if not bowl_kind_compare:
