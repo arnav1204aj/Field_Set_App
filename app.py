@@ -1575,8 +1575,23 @@ if active_view == "Compare":
                 rp2 = float(p2.get("batter_running", 0) or 0)
                 bp1 = float(p1.get("batter_boundary", 0) or 0)
                 bp2 = float(p2.get("batter_boundary", 0) or 0)
+                # Match analysis-tab logic: prefer exact composite-key average-batter field setup.
                 rg = float(p1.get("global_running", p2.get("global_running", 0)) or 0)
                 bg = float(p1.get("global_boundary", p2.get("global_boundary", 0)) or 0)
+                try:
+                    avg_field_setup_cmp = fetch_field_setup(
+                        current_mode,
+                        "average batter",
+                        bowl_kind_compare,
+                        selected_compare_lengths,
+                        outfielders_compare,
+                    )
+                    if avg_field_setup_cmp:
+                        avg_stats_cmp = avg_field_setup_cmp.get("protection_stats", {}) or {}
+                        rg = float(avg_stats_cmp.get("running", rg) or rg)
+                        bg = float(avg_stats_cmp.get("boundary", bg) or bg)
+                except Exception:
+                    pass
                 rows.append({
                     "label": "Running Protection",
                     "v1": rp1,
