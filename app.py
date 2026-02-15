@@ -861,6 +861,7 @@ st.markdown(f"""
     <div class="author-info">
         <span class="author-name">Arnav Jain | IITK</span>
         <a href="https://x.com/arnav1204aj" target="_blank" class="author-link">@arnav1204aj</a>
+        <span>Data - since 2015</span>
     </div>
 </div>
 """, unsafe_allow_html=True)
