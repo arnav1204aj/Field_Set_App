@@ -1825,3 +1825,149 @@ def plot_intrel_pitch_avg(
     )
 
     return fig
+
+
+def plot_intrel_pitch_batter(
+    intrel_results,
+    batter,
+    lengths,
+    bowl_kind,
+    min_balls=10
+):
+    """
+    3D-perspective pitch showing estimated batter (SR, Control%) by length.
+    Formula:
+    - Batter SR = other_batter_SR * intent
+    - Batter Control% = other_batter_Control% * reliability
+    """
+
+    if bowl_kind == 'pace bowler':
+        bowl_kind = 'pace'
+    else:
+        bowl_kind = 'spin'
+
+    data = intrel_results or {}
+    if not data:
+        raise ValueError(f"No data for {batter} ({bowl_kind})")
+
+    intent_data = data.get("intent_by_length", {})
+    rel_data = data.get("reliability_by_length", {})
+    oth_sr_data = data.get("othsr", {})
+    oth_con_data = data.get("othcon", {})
+    if not all(isinstance(d, dict) for d in [intent_data, rel_data, oth_sr_data, oth_con_data]):
+        raise ValueError("Invalid batter metric payload")
+
+    def _safe_float(x):
+        try:
+            if x is None:
+                return np.nan
+            v = float(x)
+            return v if np.isfinite(v) else np.nan
+        except Exception:
+            return np.nan
+
+    def _unpack_pair(v):
+        if isinstance(v, (list, tuple)) and len(v) >= 2:
+            return _safe_float(v[0]), int(v[1] or 0)
+        if isinstance(v, (int, float, np.floating)):
+            return _safe_float(v), 0
+        return np.nan, 0
+
+    fig, ax = plt.subplots(figsize=(4.5, 6))
+    fig.patch.set_alpha(0)
+    ax.set_facecolor("none")
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.axis("off")
+
+    top_y = 0.90
+    bot_y = 0.05
+    pitch = np.array([
+        [0.20 + top_y * 0.15, top_y],
+        [0.80 - top_y * 0.15, top_y],
+        [0.80 - bot_y * 0.15, bot_y],
+        [0.20 + bot_y * 0.15, bot_y],
+    ])
+
+    ax.add_patch(
+        patches.Polygon(
+            pitch,
+            closed=True,
+            fill=False,
+            edgecolor="white",
+            linewidth=3.2,
+            alpha=0.95,
+            joinstyle="round"
+        )
+    )
+
+    LENGTH_ZONES = {
+        "FULL": (0.75, 0.90),
+        "GOOD_LENGTH": (0.50, 0.75),
+        "SHORT_OF_A_GOOD_LENGTH": (0.30, 0.50),
+        "SHORT": (0.05, 0.30)
+    }
+
+    colors = ["#2563eb", "#16a34a"]  # match Avg Bat (blue/green)
+    color_idx = 0
+    for length, (y0, y1) in LENGTH_ZONES.items():
+        if length not in lengths:
+            continue
+
+        intent, balls_i = _unpack_pair(intent_data.get(length, (np.nan, 0)))
+        reliability, balls_r = _unpack_pair(rel_data.get(length, (np.nan, 0)))
+        oth_sr, balls_sr = _unpack_pair(oth_sr_data.get(length, (np.nan, 0)))
+        oth_con, balls_con = _unpack_pair(oth_con_data.get(length, (np.nan, 0)))
+
+        balls = min(balls_i, balls_r, balls_sr, balls_con)
+        if balls < min_balls or np.isnan(intent) or np.isnan(reliability) or np.isnan(oth_sr) or np.isnan(oth_con):
+            continue
+
+        batter_sr = oth_sr * intent
+        batter_con = oth_con * reliability
+
+        color = colors[color_idx % 2]
+        color_idx += 1
+        band = np.array([
+            [0.20 + y0 * 0.15, y0],
+            [0.80 - y0 * 0.15, y0],
+            [0.80 - y1 * 0.15, y1],
+            [0.20 + y1 * 0.15, y1],
+        ])
+
+        ax.add_patch(
+            patches.Polygon(
+                band,
+                closed=True,
+                facecolor=color,
+                edgecolor="white",
+                linewidth=2,
+                alpha=0.65
+            )
+        )
+
+        ax.text(
+            0.5,
+            (y0 + y1) / 2,
+            f"{length.replace('_', ' ')}\n{batter_sr:.0f}, {batter_con:.0f}%",
+            color="white",
+            fontsize=8,
+            ha="center",
+            va="center",
+            fontweight="bold"
+        )
+
+    for x in [0.48, 0.50, 0.52]:
+        ax.plot([x, x], [0.9, 0.975], color="white", linewidth=3)
+
+    fig.text(
+        0.5, 0.92,
+        "Batter (SR, Control%)",
+        ha="center",
+        va="top",
+        fontsize=12,
+        fontweight="bold",
+        color="white"
+    )
+
+    return fig

@@ -3,7 +3,7 @@ st.set_page_config(layout="wide", page_title="Optimal Field Setting | Cricket An
 
 import pandas as pd
 import numpy as np
-from functions import plot_int_wagons, plot_intent_impact, plot_field_setting, plot_intrel_pitch, plot_intrel_pitch_avg, plot_sector_ev_heatmap, create_shot_profile_chart, create_similarity_chart, create_zone_strength_table, get_top_similar_batters
+from functions import plot_int_wagons, plot_intent_impact, plot_field_setting, plot_intrel_pitch, plot_intrel_pitch_avg, plot_intrel_pitch_batter, plot_sector_ev_heatmap, create_shot_profile_chart, create_similarity_chart, create_zone_strength_table, get_top_similar_batters
 
 import requests
 import time
@@ -1263,20 +1263,22 @@ if active_view == "Analysis":
     if submit and "Intent, Reliability, Int-Rel by length" in selected_sections:
         st.markdown('---')
         st.markdown('<p class="section-header">Intent, Reliability, Int-Rel by length</p>', unsafe_allow_html=True)
-        c1, c2, c3, c4 = st.columns([1, 1, 1, 1])
+        c1, c2, c3, c4, c5 = st.columns([1, 1, 1, 1, 1])
         try:
             if intrel_data_cached is None:
                 intrel_data_cached = fetch_intrel_data(current_mode, selected_batter, selected_bowl_kind, selected_lengths)
             intrel_data = intrel_data_cached
             intrel_payload = intrel_data.get('intrel_selected', {}) if intrel_data else {}
-            with c4:
-                st.pyplot(plot_intrel_pitch_avg(intrel_payload, selected_batter, selected_lengths, selected_bowl_kind, 5))
-            with c3:
-                st.pyplot(plot_intrel_pitch('intrel_by_length', 'Int-Rel', intrel_payload, selected_batter, selected_lengths, selected_bowl_kind, 5))
-            with c2:
-                st.pyplot(plot_intrel_pitch('reliability_by_length', 'Reliability', intrel_payload, selected_batter, selected_lengths, selected_bowl_kind, 5))
             with c1:
                 st.pyplot(plot_intrel_pitch('intent_by_length', 'Intent', intrel_payload, selected_batter, selected_lengths, selected_bowl_kind, 5))
+            with c2:
+                st.pyplot(plot_intrel_pitch('reliability_by_length', 'Reliability', intrel_payload, selected_batter, selected_lengths, selected_bowl_kind, 5))
+            with c3:
+                st.pyplot(plot_intrel_pitch('intrel_by_length', 'Int-Rel', intrel_payload, selected_batter, selected_lengths, selected_bowl_kind, 5))
+            with c4:
+                st.pyplot(plot_intrel_pitch_batter(intrel_payload, selected_batter, selected_lengths, selected_bowl_kind, 5))
+            with c5:
+                st.pyplot(plot_intrel_pitch_avg(intrel_payload, selected_batter, selected_lengths, selected_bowl_kind, 5))
         except Exception:
             st.warning('Intent-Reliability data unavailable')
         st.markdown("""
@@ -1295,7 +1297,9 @@ if active_view == "Analysis":
                         the batter achieves compared to other batters in the same innings. Keeping in mind the nature of T20s,
                         Intent is given a 2x weight during multiplication. For ODIs, both are given equal weight. So for all Intent, Reliability and Int-Rel, a value of 1.20 for example means
                         the batter was 20% better, 0.8 means 20% worse, 1 is average performance. For reference, numbers of an average batter playing 
-                        in same conditions as the batter are provided. Values use a time decay factor. Last 2 years data is given 50% weight.
+                        in same conditions as the batter are provided. Hence, batter SR and Control% are:
+                        Batter SR = Avg Batter SR × Intent, Batter Control% = Avg Batter Control% × Reliability.
+                        Values use a time decay factor. Last 2 years data is given 50% weight.
                     </p>
                 </div>
                 """, unsafe_allow_html=True)
