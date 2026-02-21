@@ -621,6 +621,11 @@ st.markdown("""
         margin-bottom: 1rem;
         border: none;
     }
+
+    /* Reduce Streamlit column gaps so pitch charts sit nearly flush */
+    div[data-testid="stHorizontalBlock"] {
+        gap: 0rem !important;
+    }
     
     .section-header {
         font-size: clamp(1.2rem, 2.5vw, 1.3rem);
@@ -1263,22 +1268,22 @@ if active_view == "Analysis":
     if submit and "Intent, Reliability, Int-Rel by length" in selected_sections:
         st.markdown('---')
         st.markdown('<p class="section-header">Intent, Reliability, Int-Rel by length</p>', unsafe_allow_html=True)
-        c1, c2, c3, c4, c5 = st.columns([1, 1, 1, 1, 1])
+        c1, c2, c3, c4, c5 = st.columns([1, 1, 1, 1, 1], gap="small")
         try:
             if intrel_data_cached is None:
                 intrel_data_cached = fetch_intrel_data(current_mode, selected_batter, selected_bowl_kind, selected_lengths)
             intrel_data = intrel_data_cached
             intrel_payload = intrel_data.get('intrel_selected', {}) if intrel_data else {}
             with c1:
-                st.pyplot(plot_intrel_pitch('intent_by_length', 'Intent', intrel_payload, selected_batter, selected_lengths, selected_bowl_kind, 5))
+                st.pyplot(plot_intrel_pitch('intent_by_length', 'Intent', intrel_payload, selected_batter, selected_lengths, selected_bowl_kind, 5), use_container_width=True)
             with c2:
-                st.pyplot(plot_intrel_pitch('reliability_by_length', 'Reliability', intrel_payload, selected_batter, selected_lengths, selected_bowl_kind, 5))
+                st.pyplot(plot_intrel_pitch('reliability_by_length', 'Reliability', intrel_payload, selected_batter, selected_lengths, selected_bowl_kind, 5), use_container_width=True)
             with c3:
-                st.pyplot(plot_intrel_pitch('intrel_by_length', 'Int-Rel', intrel_payload, selected_batter, selected_lengths, selected_bowl_kind, 5))
+                st.pyplot(plot_intrel_pitch('intrel_by_length', 'Int-Rel', intrel_payload, selected_batter, selected_lengths, selected_bowl_kind, 5), use_container_width=True)
             with c4:
-                st.pyplot(plot_intrel_pitch_batter(intrel_payload, selected_batter, selected_lengths, selected_bowl_kind, 5))
+                st.pyplot(plot_intrel_pitch_batter(intrel_payload, selected_batter, selected_lengths, selected_bowl_kind, 5), use_container_width=True)
             with c5:
-                st.pyplot(plot_intrel_pitch_avg(intrel_payload, selected_batter, selected_lengths, selected_bowl_kind, 5))
+                st.pyplot(plot_intrel_pitch_avg(intrel_payload, selected_batter, selected_lengths, selected_bowl_kind, 5), use_container_width=True)
         except Exception:
             st.warning('Intent-Reliability data unavailable')
         st.markdown("""

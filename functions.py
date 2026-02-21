@@ -1562,6 +1562,8 @@ def plot_intrel_pitch(
             return _safe_float(v), 0
         return np.nan, 0
 
+    scale = 1.35
+    geom_scale = 1.08
     # --- figure ---
     fig, ax = plt.subplots(figsize=(4.5, 6))
     fig.patch.set_alpha(0)     # <-- IMPORTANT
@@ -1569,16 +1571,26 @@ def plot_intrel_pitch(
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     ax.axis("off")
+    fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
 
     # --- perspective transform (simple trapezoid pitch) ---
     top_y = 0.90
     bot_y = 0.05
+    left_base = 0.20
+    right_base = 0.80
+    persp = 0.15
+
+    def sx(x):
+        return 0.5 + (x - 0.5) * geom_scale
+
+    def sy(y):
+        return 0.5 + (y - 0.5) * geom_scale
 
     pitch = np.array([
-        [0.20 + top_y * 0.15, top_y],
-        [0.80 - top_y * 0.15, top_y],
-        [0.80 - bot_y * 0.15, bot_y],
-        [0.20 + bot_y * 0.15, bot_y],
+        [sx(left_base + top_y * persp), sy(top_y)],
+        [sx(right_base - top_y * persp), sy(top_y)],
+        [sx(right_base - bot_y * persp), sy(bot_y)],
+        [sx(left_base + bot_y * persp), sy(bot_y)],
     ])
 
     ax.add_patch(
@@ -1587,7 +1599,7 @@ def plot_intrel_pitch(
             closed=True,
             fill=False,
             edgecolor="white",
-            linewidth=3.2,
+            linewidth=3.2 * scale,
             alpha=0.95,
             joinstyle="round"
         )
@@ -1633,10 +1645,10 @@ def plot_intrel_pitch(
 
         # trapezoidal band (perspective scaling)
         band = np.array([
-            [0.20 + y0 * 0.15, y0],
-            [0.80 - y0 * 0.15, y0],
-            [0.80 - y1 * 0.15, y1],
-            [0.20 + y1 * 0.15, y1],
+            [sx(left_base + y0 * persp), sy(y0)],
+            [sx(right_base - y0 * persp), sy(y0)],
+            [sx(right_base - y1 * persp), sy(y1)],
+            [sx(left_base + y1 * persp), sy(y1)],
         ])
 
         ax.add_patch(
@@ -1645,37 +1657,38 @@ def plot_intrel_pitch(
                 closed=True,
                 facecolor=color,
                 edgecolor="white",
-                linewidth=2,
+                linewidth=2 * scale,
                 alpha=0.65
             )
         )
 
         # label
         ax.text(
-            0.5,
-            (y0 + y1) / 2,
+            sx(0.5),
+            sy((y0 + y1) / 2),
             f"{length.replace('_', ' ')}\n{intrel:.2f}",
             color="white",
-            fontsize=8,
+            fontsize=8 * scale,
             ha="center",
             va="center",
             fontweight="bold"
         )
 
     
-    stump_x = [0.48, 0.50, 0.52]
+    stump_x = [sx(0.48), sx(0.50), sx(0.52)]
     for x in stump_x:
-        ax.plot([x, x], [0.9, 0.975], color="white", linewidth=3)
+        ax.plot([x, x], [sy(0.90), sy(0.975)], color="white", linewidth=3 * scale)
     
     # --- title ---
-    fig.text(
-    0.5, 0.92,
-    heading,
-    ha="center",
-    va="top",
-    fontsize=12,
-    fontweight="bold",
-    color="white"
+    ax.text(
+        0.5, 1.08, heading,
+        transform=ax.transAxes,
+        ha="center",
+        va="top",
+        fontsize=12 * scale,
+        fontweight="bold",
+        color="white",
+        clip_on=False
     )
 
     return fig
@@ -1723,6 +1736,8 @@ def plot_intrel_pitch_avg(
             return _safe_float(v), 0
         return np.nan, 0
 
+    scale = 1.35
+    geom_scale = 1.08
     # --- figure ---
     fig, ax = plt.subplots(figsize=(4.5, 6))
     fig.patch.set_alpha(0)
@@ -1730,16 +1745,26 @@ def plot_intrel_pitch_avg(
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     ax.axis("off")
+    fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
 
     # --- perspective pitch ---
     top_y = 0.90
     bot_y = 0.05
+    left_base = 0.20
+    right_base = 0.80
+    persp = 0.15
+
+    def sx(x):
+        return 0.5 + (x - 0.5) * geom_scale
+
+    def sy(y):
+        return 0.5 + (y - 0.5) * geom_scale
 
     pitch = np.array([
-        [0.20 + top_y * 0.15, top_y],
-        [0.80 - top_y * 0.15, top_y],
-        [0.80 - bot_y * 0.15, bot_y],
-        [0.20 + bot_y * 0.15, bot_y],
+        [sx(left_base + top_y * persp), sy(top_y)],
+        [sx(right_base - top_y * persp), sy(top_y)],
+        [sx(right_base - bot_y * persp), sy(bot_y)],
+        [sx(left_base + bot_y * persp), sy(bot_y)],
     ])
 
     ax.add_patch(
@@ -1748,7 +1773,7 @@ def plot_intrel_pitch_avg(
             closed=True,
             fill=False,
             edgecolor="white",
-            linewidth=3.2,
+            linewidth=3.2 * scale,
             alpha=0.95,
             joinstyle="round"
         )
@@ -1781,10 +1806,10 @@ def plot_intrel_pitch_avg(
         color_idx += 1
 
         band = np.array([
-            [0.20 + y0 * 0.15, y0],
-            [0.80 - y0 * 0.15, y0],
-            [0.80 - y1 * 0.15, y1],
-            [0.20 + y1 * 0.15, y1],
+            [sx(left_base + y0 * persp), sy(y0)],
+            [sx(right_base - y0 * persp), sy(y0)],
+            [sx(right_base - y1 * persp), sy(y1)],
+            [sx(left_base + y1 * persp), sy(y1)],
         ])
 
         ax.add_patch(
@@ -1793,35 +1818,37 @@ def plot_intrel_pitch_avg(
                 closed=True,
                 facecolor=color,
                 edgecolor="white",
-                linewidth=2,
+                linewidth=2 * scale,
                 alpha=0.65
             )
         )
 
         ax.text(
-            0.5,
-            (y0 + y1) / 2,
+            sx(0.5),
+            sy((y0 + y1) / 2),
             f"{length.replace('_', ' ')}\n{sr:.0f}, {con:.0f}%",
             color="white",
-            fontsize=8,
+            fontsize=8 * scale,
             ha="center",
             va="center",
             fontweight="bold"
         )
 
     # --- stumps ---
-    for x in [0.48, 0.50, 0.52]:
-        ax.plot([x, x], [0.9, 0.975], color="white", linewidth=3)
+    for x in [sx(0.48), sx(0.50), sx(0.52)]:
+        ax.plot([x, x], [sy(0.90), sy(0.975)], color="white", linewidth=3 * scale)
 
     # --- heading ---
-    fig.text(
-        0.5, 0.92,
+    ax.text(
+        0.5, 1.08,
         "Avg Bat (SR, Control%)",
+        transform=ax.transAxes,
         ha="center",
         va="top",
-        fontsize=12,
+        fontsize=12 * scale,
         fontweight="bold",
-        color="white"
+        color="white",
+        clip_on=False
     )
 
     return fig
@@ -1873,20 +1900,33 @@ def plot_intrel_pitch_batter(
             return _safe_float(v), 0
         return np.nan, 0
 
+    scale = 1.35
+    geom_scale = 1.08
     fig, ax = plt.subplots(figsize=(4.5, 6))
     fig.patch.set_alpha(0)
     ax.set_facecolor("none")
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     ax.axis("off")
+    fig.subplots_adjust(left=0, right=1, bottom=0, top=1)
 
     top_y = 0.90
     bot_y = 0.05
+    left_base = 0.20
+    right_base = 0.80
+    persp = 0.15
+
+    def sx(x):
+        return 0.5 + (x - 0.5) * geom_scale
+
+    def sy(y):
+        return 0.5 + (y - 0.5) * geom_scale
+
     pitch = np.array([
-        [0.20 + top_y * 0.15, top_y],
-        [0.80 - top_y * 0.15, top_y],
-        [0.80 - bot_y * 0.15, bot_y],
-        [0.20 + bot_y * 0.15, bot_y],
+        [sx(left_base + top_y * persp), sy(top_y)],
+        [sx(right_base - top_y * persp), sy(top_y)],
+        [sx(right_base - bot_y * persp), sy(bot_y)],
+        [sx(left_base + bot_y * persp), sy(bot_y)],
     ])
 
     ax.add_patch(
@@ -1895,7 +1935,7 @@ def plot_intrel_pitch_batter(
             closed=True,
             fill=False,
             edgecolor="white",
-            linewidth=3.2,
+            linewidth=3.2 * scale,
             alpha=0.95,
             joinstyle="round"
         )
@@ -1929,10 +1969,10 @@ def plot_intrel_pitch_batter(
         color = colors[color_idx % 2]
         color_idx += 1
         band = np.array([
-            [0.20 + y0 * 0.15, y0],
-            [0.80 - y0 * 0.15, y0],
-            [0.80 - y1 * 0.15, y1],
-            [0.20 + y1 * 0.15, y1],
+            [sx(left_base + y0 * persp), sy(y0)],
+            [sx(right_base - y0 * persp), sy(y0)],
+            [sx(right_base - y1 * persp), sy(y1)],
+            [sx(left_base + y1 * persp), sy(y1)],
         ])
 
         ax.add_patch(
@@ -1941,33 +1981,37 @@ def plot_intrel_pitch_batter(
                 closed=True,
                 facecolor=color,
                 edgecolor="white",
-                linewidth=2,
+                linewidth=2 * scale,
                 alpha=0.65
             )
         )
 
         ax.text(
-            0.5,
-            (y0 + y1) / 2,
+            sx(0.5),
+            sy((y0 + y1) / 2),
             f"{length.replace('_', ' ')}\n{batter_sr:.0f}, {batter_con:.0f}%",
             color="white",
-            fontsize=8,
+            fontsize=8 * scale,
             ha="center",
             va="center",
             fontweight="bold"
         )
 
-    for x in [0.48, 0.50, 0.52]:
-        ax.plot([x, x], [0.9, 0.975], color="white", linewidth=3)
+    for x in [sx(0.48), sx(0.50), sx(0.52)]:
+        ax.plot([x, x], [sy(0.90), sy(0.975)], color="white", linewidth=3 * scale)
 
-    fig.text(
-        0.5, 0.92,
+    ax.text(
+        0.5, 1.08,
         "Batter (SR, Control%)",
+        transform=ax.transAxes,
         ha="center",
         va="top",
-        fontsize=12,
+        fontsize=12 * scale,
         fontweight="bold",
-        color="white"
+        color="white",
+        clip_on=False
     )
 
     return fig
+
+
