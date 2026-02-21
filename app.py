@@ -518,6 +518,16 @@ def _calc_p95_radius(ww_data: Dict[str, Any], lengths: List[str]) -> float:
     return float(np.percentile(norms, 95)) if norms else 0.0
 
 
+def _to_bat_hand_short(batting_style: str) -> str:
+    style = (batting_style or "").strip().lower()
+    
+    if style == "right-hand-bat":
+        return "RHB"
+    if style == "left-hand-bat":
+        return "LHB"
+    return "-"
+
+
 # Initialize session state
 if 'current_mode' not in st.session_state:
     st.session_state['current_mode'] = None
@@ -953,7 +963,55 @@ if active_view == "Analysis":
 
             
 
+    if submit:
+        players_list = fetch_players(current_mode)
+        player_meta = {}
+        if players_list:
+            for player in players_list:
+                if str(player.get("fullname", "")).strip().lower() == selected_batter.strip().lower():
+                    player_meta = player
+                    break
+
+        player_img_url = (player_meta.get("image_path", "") or "").strip()
+        country_flag = (player_meta.get("country_image_path", "") or "").strip()
+        country_name = str(player_meta.get("country_name", "") or "-")
+        bat_hand_short = _to_bat_hand_short(str(player_meta.get("battingstyle", "") or ""))
+        flag_html = (
+            f'<img src="{country_flag}" alt="country flag" style="height: 1em; width: auto; border-radius: 2px; object-fit: contain; vertical-align: middle; margin-left: 0.4rem;" />'
+            if country_flag else ""
+        )
+
+        image_html = (
+            f'<img src="{player_img_url}" alt="{selected_batter}" style="width: clamp(180px, 20vw, 260px); border-radius: 12px; display: block;" />'
+            if player_img_url
+            else ""
+        )
+
+        st.markdown(
+            f"""
+            <div style="
+                width: 100%;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap: 1rem;
+                margin: 0 0 0.6rem 0;
+            ">
+                <div style="display:flex; align-items:center; justify-content:center;">
+                    {image_html}
+                </div>
+                <div style="display:flex; flex-direction:column; justify-content:center; min-width: 280px;">
+                    <p style="margin:0; text-align:center; font-size:1.35rem; font-weight:700; color:#ffffff;">{selected_batter}</p>
+                    <p style="margin:0.55rem 0 0 0; text-align:center; font-size:1.02rem; font-weight:600; color:rgba(255,255,255,0.9);">{country_name}{flag_html}</p>
+                    <p style="margin:0.55rem 0 0 0; text-align:center; font-size:1rem; font-weight:700; color:#fca5a5;">{bat_hand_short}</p>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
     if submit and "Field Overview" in selected_sections:
+        st.markdown('---')
         st.markdown('<p class="section-header">Field Overview</p>', unsafe_allow_html=True)
         if not selected_outfielders:
             st.warning('No outfielder option available for this filter.')
@@ -963,109 +1021,36 @@ if active_view == "Analysis":
                 st.warning("No field setting found for this combination.")
             else:
                 data = field_setup
-                img_col, stats_col = st.columns([1, 2], vertical_alignment="center", gap="large")
-                with img_col:
-                    show_image = current_mode != 'WOMENS_T20'
+                st.markdown(f'<p class="context-info" style="color: rgba(255,255,255,0.7); font-size:1.1rem; font-weight:500;">{selected_bowl_kind} | {", ".join(selected_lengths)} | {selected_outfielders} outfielders</p>', unsafe_allow_html=True)
 
-                    if not show_image:
-                        name_parts = selected_batter.split()
-                        if len(name_parts) > 1:
-                            first_line = ' '.join(name_parts[:-1])
-                            second_line = name_parts[-1]
-                            display_name = f"{first_line}<br/>{second_line}"
-                        else:
-                            display_name = selected_batter
+                if zone_data_cached is None:
+                    zone_data_cached = fetch_zone_strength(current_mode, selected_batter, selected_bowl_kind, selected_lengths)
+                zone_metrics = zone_data_cached
+                dict_360 = zone_metrics.get('dict_360_selected', {}) if zone_metrics else {}
+                avg_360 = zone_metrics.get('avg_360_selected', {}) if zone_metrics else {}
+                sel_lens = selected_lengths if isinstance(selected_lengths, list) else [selected_lengths]
 
-                        st.markdown(
-                            f"""
-                            <div style="
-                                display: flex;
-                                justify-content: center;
-                                align-items: center;
-                                height: 100%;
-                                width: 100%;
-                            ">
-                                <p style="
-                                    margin: 0;
-                                    font-size: 2rem;
-                                    font-weight: 700;
-                                    text-align: center;
-                                    color: white;
-                                    line-height: 1.3;
-                                ">
-                                    {display_name}
-                                </p>
-                            </div>
-                            """,
-                            unsafe_allow_html=True,
-                        )
-                    else:
-                        players_list = fetch_players(current_mode)
-                        player_images = {player['fullname']: player.get('image_path', '') for player in players_list} if players_list else {}
-                        player_img_url = player_images.get(selected_batter, "https://via.placeholder.com/300x300.png?text=No+Image")
+                def avg_score(scope: str, run_class: str) -> float:
+                    vals = []
+                    for ln in sel_lens:
+                        try:
+                            if scope == 'batter':
+                                v = dict_360.get(ln, {}).get(run_class, {}).get('360_score', 0)
+                            else:
+                                v = avg_360.get(ln, {}).get(run_class, {}).get('360_score', 0)
+                        except Exception:
+                            v = 0
+                        vals.append(v)
+                    return sum(vals) / len(sel_lens) if sel_lens else 0
 
-                        st.markdown(
-                            f"""
-                            <div style="
-                                display: flex;
-                                justify-content: center;
-                                align-items: center;
-                                height: 100%;
-                                width: 100%;
-                            ">
-                                <div class="player-img-wrapper">
-                                    <img src="{player_img_url}"
-                                        style="
-                                            width: 100%;
-                                            border-radius: 12px;
-                                            display: block;
-                                            margin: 0 auto;
-                                        " />
-                                    <p style="
-                                        margin-top: 12px;
-                                        margin-bottom: 0;
-                                        font-size: 1.5rem;
-                                        font-weight: 600;
-                                        text-align: center;
-                                    ">
-                                        {selected_batter}
-                                    </p>
-                                </div>
-                            </div>
-                            """,
-                            unsafe_allow_html=True,
-                        )
-                with stats_col:
-                    st.markdown(f'<p class="context-info" style="color: rgba(255,255,255,0.7); font-size:1.1rem; font-weight:500;">{selected_bowl_kind} | {", ".join(selected_lengths)} | {selected_outfielders} outfielders</p>', unsafe_allow_html=True)
-
-                    if zone_data_cached is None:
-                        zone_data_cached = fetch_zone_strength(current_mode, selected_batter, selected_bowl_kind, selected_lengths)
-                    zone_metrics = zone_data_cached
-                    dict_360 = zone_metrics.get('dict_360_selected', {}) if zone_metrics else {}
-                    avg_360 = zone_metrics.get('avg_360_selected', {}) if zone_metrics else {}
-                    sel_lens = selected_lengths if isinstance(selected_lengths, list) else [selected_lengths]
-
-                    def avg_score(scope: str, run_class: str) -> float:
-                        vals = []
-                        for ln in sel_lens:
-                            try:
-                                if scope == 'batter':
-                                    v = dict_360.get(ln, {}).get(run_class, {}).get('360_score', 0)
-                                else:
-                                    v = avg_360.get(ln, {}).get(run_class, {}).get('360_score', 0)
-                            except Exception:
-                                v = 0
-                            vals.append(v)
-                        return sum(vals) / len(sel_lens) if sel_lens else 0
-
-                    for run_class, label in [("running", "RUNNING"), ("boundary", "BOUNDARY"), ("overall", "OVERALL")]:
-                        batter_score = avg_score('batter', run_class)
-                        global_score = avg_score('global', run_class)
-                        c1, c2 = st.columns(2)
-                        with c1:
-                            st.metric(f"BATTER 360 SCORE ({label})", f"{batter_score:.1f}", delta=f"{batter_score - global_score:.1f}")
-                        with c2:
-                            st.metric(f"GLOBAL AVG ({label} 360)", f"{global_score:.1f}")
+                for run_class, label in [("running", "RUNNING"), ("boundary", "BOUNDARY"), ("overall", "OVERALL")]:
+                    batter_score = avg_score('batter', run_class)
+                    global_score = avg_score('global', run_class)
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        st.metric(f"BATTER 360 SCORE ({label})", f"{batter_score:.1f}", delta=f"{batter_score - global_score:.1f}")
+                    with c2:
+                        st.metric(f"GLOBAL AVG ({label} 360)", f"{global_score:.1f}")
 
                 st.markdown('---')
                 c1, c2 = st.columns([1.6, 1.4])
