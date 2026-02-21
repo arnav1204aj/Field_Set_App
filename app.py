@@ -972,43 +972,48 @@ if active_view == "Analysis":
                     player_meta = player
                     break
 
-        player_img_url = (player_meta.get("image_path", "") or "").strip()
-        country_flag = (player_meta.get("country_image_path", "") or "").strip()
-        country_name = str(player_meta.get("country_name", "") or "-")
-        bat_hand_short = _to_bat_hand_short(str(player_meta.get("battingstyle", "") or ""))
-        flag_html = (
-            f'<img src="{country_flag}" alt="country flag" style="height: 1em; width: auto; border-radius: 2px; object-fit: contain; vertical-align: middle; margin-left: 0.4rem;" />'
-            if country_flag else ""
-        )
+        if not player_meta:
+            st.markdown(
+                f'<p style="margin:0 0 0.6rem 0; text-align:center; font-size:1.35rem; font-weight:700; color:#ffffff;">{selected_batter}</p>',
+                unsafe_allow_html=True,
+            )
+        else:
+            player_img_url = (player_meta.get("image_path", "") or "").strip()
+            country_flag = (player_meta.get("country_image_path", "") or "").strip()
+            country_name = str(player_meta.get("country_name", "") or "-")
+            bat_hand_short = _to_bat_hand_short(str(player_meta.get("battingstyle", "") or ""))
+            flag_html = (
+                f'<img src="{country_flag}" alt="country flag" style="height: 1em; width: auto; border-radius: 2px; object-fit: contain; vertical-align: middle; margin-left: 0.4rem;" />'
+                if country_flag else ""
+            )
+            image_html = (
+                f'<img src="{player_img_url}" alt="{selected_batter}" style="width: clamp(180px, 20vw, 260px); border-radius: 12px; display: block;" />'
+                if player_img_url
+                else ""
+            )
 
-        image_html = (
-            f'<img src="{player_img_url}" alt="{selected_batter}" style="width: clamp(180px, 20vw, 260px); border-radius: 12px; display: block;" />'
-            if player_img_url
-            else ""
-        )
-
-        st.markdown(
-            f"""
-            <div style="
-                width: 100%;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                gap: 1rem;
-                margin: 0 0 0.6rem 0;
-            ">
-                <div style="display:flex; align-items:center; justify-content:center;">
-                    {image_html}
+            st.markdown(
+                f"""
+                <div style="
+                    width: 100%;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    gap: 1rem;
+                    margin: 0 0 0.6rem 0;
+                ">
+                    <div style="display:flex; align-items:center; justify-content:center;">
+                        {image_html}
+                    </div>
+                    <div style="display:flex; flex-direction:column; justify-content:center; min-width: 280px;">
+                        <p style="margin:0; text-align:center; font-size:1.35rem; font-weight:700; color:#ffffff;">{selected_batter}</p>
+                        <p style="margin:0.55rem 0 0 0; text-align:center; font-size:1.02rem; font-weight:600; color:rgba(255,255,255,0.9);">{country_name}{flag_html}</p>
+                        <p style="margin:0.55rem 0 0 0; text-align:center; font-size:1rem; font-weight:700; color:#fca5a5;">{bat_hand_short}</p>
+                    </div>
                 </div>
-                <div style="display:flex; flex-direction:column; justify-content:center; min-width: 280px;">
-                    <p style="margin:0; text-align:center; font-size:1.35rem; font-weight:700; color:#ffffff;">{selected_batter}</p>
-                    <p style="margin:0.55rem 0 0 0; text-align:center; font-size:1.02rem; font-weight:600; color:rgba(255,255,255,0.9);">{country_name}{flag_html}</p>
-                    <p style="margin:0.55rem 0 0 0; text-align:center; font-size:1rem; font-weight:700; color:#fca5a5;">{bat_hand_short}</p>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+                """,
+                unsafe_allow_html=True,
+            )
 
     if submit and "Field Overview" in selected_sections:
         st.markdown('---')
