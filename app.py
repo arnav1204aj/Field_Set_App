@@ -8,6 +8,7 @@ from functions import plot_int_wagons, plot_intent_impact, plot_field_setting, p
 import requests
 import time
 from typing import Dict, Any, List, Optional
+from html import escape
 
 
 # # ─────────────────────────────
@@ -276,6 +277,13 @@ def fetch_shot_profile(mode: str, batter: str, bowl_kind: str, lengths: List[str
         }
     )
     return response if response else None
+
+
+@st.cache_data(ttl=600, max_entries=50)
+def fetch_rankings(mode: str, rank_type: str, sort_by: str, top_n: int = 0) -> List[Dict]:
+    """Fetch rankings for pace/spin from backend."""
+    response = make_request(f"/rankings/{mode}/{rank_type}?sort_by={sort_by}&top_n={top_n}")
+    return response.get("rankings", []) if response else []
 
 
 def _avg(values: List[float]) -> float:
@@ -904,7 +912,7 @@ st.markdown("---")
 # ─────────────────────────────
 # Tabs
 # ─────────────────────────────
-VIEW_OPTIONS = ["Analysis", "Compare", "Information"]
+VIEW_OPTIONS = ["Analysis", "Compare", "Rankings", "Information"]
 if "active_view" not in st.session_state or st.session_state["active_view"] not in VIEW_OPTIONS:
     st.session_state["active_view"] = "Analysis"
 
@@ -1686,6 +1694,119 @@ if active_view == "Compare":
                 _render_compare_rows("Lengthwise Int-Rel", batter1, batter2, rows, "cmp_intrel")
     else:
         st.info("Set compare filters in sidebar and click **Compare**.")
+
+# Rankings Tab
+if active_view == "Rankings":
+    st.markdown('<p class="section-header">Rankings</p>', unsafe_allow_html=True)
+    if current_mode != "MENS_T20":
+        st.info("Rankings are currently available only for Men's T20.")
+    else:
+        st.markdown(
+            """
+            <div class="info-card">
+                <p style="color: rgba(255,255,255,0.88); line-height: 1.7; font-size: 0.98rem; margin: 0;">
+                    <strong style="color: #fde68a;">This is an experimental and under development section.</strong>
+                    With global cricket moving towards leagues, ICC rankings (based on T20Is only) do not provide the full picture.
+                    The objective here is to build one unified ranking for T20 cricket.
+                    These rankings are computed using the last 2 years of league and international cricket data.
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        rank_type_options = {
+            "Pace": "pace",
+            "Spin": "spin",
+        }
+        metric_options = {
+            "Overall Quality Score": "overall",
+            "Strike Factor": "strike_factor",
+            "Control Factor": "control_factor",
+        }
+        f1, f2 = st.columns([1, 1], gap="small")
+        with f1:
+            selected_rank_type_label = st.selectbox(
+                "Type",
+                list(rank_type_options.keys()),
+                index=0,
+                key="rankings_type",
+            )
+        with f2:
+            selected_metric_label = st.selectbox(
+                "Ranking Metric",
+                list(metric_options.keys()),
+                index=0,
+                key="rankings_metric",
+            )
+        search_query = st.text_input("Search Player", value="", key="rankings_search")
+
+        rank_type_key = rank_type_options[selected_rank_type_label]
+        metric_key = metric_options[selected_metric_label]
+        metric_col = {
+            "overall": "composite_rank_score",
+            "strike_factor": "strike_factor",
+            "control_factor": "control_factor",
+        }[metric_key]
+
+        rows = fetch_rankings(current_mode, rank_type_key, metric_key, top_n=0)
+        if not rows:
+            st.warning(f"No {selected_rank_type_label.lower()} rankings available.")
+        else:
+            rank_df = pd.DataFrame(rows).reset_index(drop=True)
+            rank_df["original_rank"] = rank_df.index + 1
+            if search_query.strip():
+                q = search_query.strip().lower()
+                rank_df = rank_df[rank_df["batter"].astype(str).str.lower().str.contains(q, na=False)]
+            if rank_df.empty:
+                st.info("No player matched your search.")
+            else:
+                rank_df = rank_df.reset_index(drop=True)
+                st.caption(f"{selected_rank_type_label} rankings | {selected_metric_label} | {len(rank_df)} players")
+                tiles = []
+                for idx, row in rank_df.iterrows():
+                    player = escape(str(row.get("batter", "-")))
+                    original_rank = int(row.get("original_rank", 0) or 0)
+                    strike = float(row.get("strike_factor", 0) or 0)
+                    control = float(row.get("control_factor", 0) or 0)
+                    overall = float(row.get("composite_rank_score", 0) or 0)
+                    if idx % 2 == 0:
+                        card_bg = "linear-gradient(135deg, rgba(30,41,59,0.55) 0%, rgba(51,65,85,0.35) 100%)"
+                        card_border = "rgba(148,163,184,0.35)"
+                        rank_bg = "rgba(34,211,238,0.22)"
+                        rank_color = "#67e8f9"
+                    else:
+                        card_bg = "linear-gradient(135deg, rgba(22,101,52,0.42) 0%, rgba(20,83,45,0.28) 100%)"
+                        card_border = "rgba(74,222,128,0.30)"
+                        rank_bg = "rgba(74,222,128,0.20)"
+                        rank_color = "#86efac"
+
+                    strike_style = "color:#fde68a; font-weight:800;" if metric_col == "strike_factor" else "color:rgba(255,255,255,0.9); font-weight:600;"
+                    control_style = "color:#fde68a; font-weight:800;" if metric_col == "control_factor" else "color:rgba(255,255,255,0.9); font-weight:600;"
+                    overall_style = "color:#fde68a; font-weight:800;" if metric_col == "composite_rank_score" else "color:rgba(255,255,255,0.9); font-weight:600;"
+                    tiles.append(
+                        (
+                            f'<div style="background: {card_bg}; border: 1px solid {card_border}; border-radius: 10px; padding: 0.65rem 0.8rem;">'
+                            '<div style="display:flex; align-items:center; gap:0.75rem; white-space:nowrap; overflow:hidden;">'
+                            f'<span style="font-size:0.82rem; color:{rank_color}; font-weight:900; background:{rank_bg}; border:1px solid {rank_color}; border-radius:999px; padding:0.12rem 0.52rem;">#{original_rank}</span>'
+                            f'<span style="font-size:1rem; color:white; font-weight:700; min-width:140px; overflow:hidden; text-overflow:ellipsis;">{player}</span>'
+                            f'<span style="font-size:0.84rem; {strike_style}">Strike: {strike:.3f}</span>'
+                            f'<span style="font-size:0.84rem; {control_style}">Control: {control:.3f}</span>'
+                            f'<span style="font-size:0.84rem; {overall_style}">Overall: {overall:.3f}</span>'
+                            '</div>'
+                            '</div>'
+                        )
+                    )
+                tiles_html = "".join(tiles)
+                st.markdown(
+                    f"""
+                    <div style="max-height: 68vh; overflow-y: auto; padding-right: 0.25rem;">
+                        <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(520px, 1fr)); gap:0.55rem;">
+                            {tiles_html}
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
 
 # Info Tab
 # ─────────────────────────────
