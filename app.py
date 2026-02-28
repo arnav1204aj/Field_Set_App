@@ -11,7 +11,7 @@ from typing import Dict, Any, List, Optional
 from html import escape
 
 
-# # ─────────────────────────────
+# # # ─────────────────────────────
 API_KEY = st.secrets["API_KEY"]
 BACKEND_URL = st.secrets["BACKEND_URL"]
 
@@ -1762,46 +1762,69 @@ if active_view == "Rankings":
             else:
                 rank_df = rank_df.reset_index(drop=True)
                 st.caption(f"{selected_rank_type_label} rankings | {selected_metric_label} | {len(rank_df)} players")
-                tiles = []
+                cards = []
                 for idx, row in rank_df.iterrows():
                     player = escape(str(row.get("batter", "-")))
                     original_rank = int(row.get("original_rank", 0) or 0)
                     strike = float(row.get("strike_factor", 0) or 0)
                     control = float(row.get("control_factor", 0) or 0)
                     overall = float(row.get("composite_rank_score", 0) or 0)
-                    if idx % 2 == 0:
-                        card_bg = "linear-gradient(135deg, rgba(30,41,59,0.55) 0%, rgba(51,65,85,0.35) 100%)"
-                        card_border = "rgba(148,163,184,0.35)"
-                        rank_bg = "rgba(34,211,238,0.22)"
-                        rank_color = "#67e8f9"
-                    else:
-                        card_bg = "linear-gradient(135deg, rgba(22,101,52,0.42) 0%, rgba(20,83,45,0.28) 100%)"
-                        card_border = "rgba(74,222,128,0.30)"
-                        rank_bg = "rgba(74,222,128,0.20)"
-                        rank_color = "#86efac"
 
-                    strike_style = "color:#fde68a; font-weight:800;" if metric_col == "strike_factor" else "color:rgba(255,255,255,0.9); font-weight:600;"
-                    control_style = "color:#fde68a; font-weight:800;" if metric_col == "control_factor" else "color:rgba(255,255,255,0.9); font-weight:600;"
-                    overall_style = "color:#fde68a; font-weight:800;" if metric_col == "composite_rank_score" else "color:rgba(255,255,255,0.9); font-weight:600;"
-                    tiles.append(
-                        (
-                            f'<div style="background: {card_bg}; border: 1px solid {card_border}; border-radius: 10px; padding: 0.65rem 0.8rem;">'
-                            '<div style="display:flex; align-items:center; gap:0.75rem; white-space:nowrap; overflow:hidden;">'
-                            f'<span style="font-size:0.82rem; color:{rank_color}; font-weight:900; background:{rank_bg}; border:1px solid {rank_color}; border-radius:999px; padding:0.12rem 0.52rem;">#{original_rank}</span>'
-                            f'<span style="font-size:1rem; color:white; font-weight:700; min-width:140px; overflow:hidden; text-overflow:ellipsis;">{player}</span>'
-                            f'<span style="font-size:0.84rem; {strike_style}">Strike: {strike:.3f}</span>'
-                            f'<span style="font-size:0.84rem; {control_style}">Control: {control:.3f}</span>'
-                            f'<span style="font-size:0.84rem; {overall_style}">Overall: {overall:.3f}</span>'
+                    if idx % 2 == 0:
+                        card_bg = "linear-gradient(135deg, rgba(17,24,39,0.78) 0%, rgba(30,41,59,0.58) 100%)"
+                        card_border = "rgba(56,189,248,0.32)"
+                    else:
+                        card_bg = "linear-gradient(135deg, rgba(15,23,42,0.82) 0%, rgba(22,78,99,0.45) 100%)"
+                        card_border = "rgba(125,211,252,0.28)"
+
+                    def _bar_width(val: float) -> float:
+                        pct = val * 100.0 if val <= 1.5 else val
+                        return max(0.0, min(100.0, pct))
+
+                    def _bar(label: str, value: float, key: str) -> str:
+                        is_active = (metric_col == key)
+                        fill_gradient = (
+                            "linear-gradient(90deg, #22d3ee 0%, #0284c7 100%)"
+                            if is_active
+                            else "linear-gradient(90deg, #475569 0%, #334155 100%)"
+                        )
+                        value_color = "#ffffff" if is_active else "rgba(226,232,240,0.95)"
+                        label_color = "#e0f2fe" if is_active else "rgba(203,213,225,0.92)"
+                        glow = (
+                            "box-shadow: 0 0 0 2px rgba(34,211,238,0.45), 0 0 18px rgba(34,211,238,0.25);"
+                            if is_active
+                            else ""
+                        )
+                        return (
+                            '<div style="display:grid; grid-template-columns: 94px 1fr 58px; align-items:center; gap:0.55rem; margin-top:0.4rem;">'
+                            f'<span style="font-size:0.78rem; color:{label_color}; font-weight:{"800" if is_active else "700"}; letter-spacing:0.2px;">{label}</span>'
+                            f'<div style="height:10px; border-radius:999px; background:rgba(15,23,42,0.92); border:1px solid rgba(148,163,184,0.35); overflow:hidden; {glow}">'
+                            f'<div style="height:100%; width:{_bar_width(value):.2f}%; background:{fill_gradient};"></div>'
                             '</div>'
+                            f'<span style="text-align:right; font-size:0.82rem; color:{value_color}; font-weight:{"900" if is_active else "750"};">{value:.3f}</span>'
+                            '</div>'
+                        )
+
+                    cards.append(
+                        (
+                            f'<div style="background:{card_bg}; border:1px solid {card_border}; border-radius:12px; padding:0.72rem 0.86rem;">'
+                            '<div style="display:flex; align-items:center; gap:0.65rem; margin-bottom:0.22rem;">'
+                            '<span style="font-size:0.86rem; color:#e0f2fe; font-weight:900; background:rgba(56,189,248,0.2); border:1px solid rgba(56,189,248,0.5); border-radius:999px; padding:0.11rem 0.55rem;">'
+                            f'#{original_rank}</span>'
+                            f'<span style="font-size:1.01rem; color:#ffffff; font-weight:760; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{player}</span>'
+                            '</div>'
+                            f'{_bar("Strike", strike, "strike_factor")}'
+                            f'{_bar("Control", control, "control_factor")}'
+                            f'{_bar("Overall", overall, "composite_rank_score")}'
                             '</div>'
                         )
                     )
-                tiles_html = "".join(tiles)
+                cards_html = "".join(cards)
                 st.markdown(
                     f"""
-                    <div style="max-height: 68vh; overflow-y: auto; padding-right: 0.25rem;">
-                        <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(520px, 1fr)); gap:0.55rem;">
-                            {tiles_html}
+                    <div style="max-height: 100vh; overflow-y: auto; padding-right: 0.25rem;">
+                        <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(560px, 1fr)); gap:0.58rem;">
+                            {cards_html}
                         </div>
                     </div>
                     """,
