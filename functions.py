@@ -312,7 +312,7 @@ def plot_intent_impact(
     ax.plot(valid, raw_impact,
             color=colors["raw"],
             linewidth=2.8,
-            label="Raw intent impact",
+            
             zorder=4)
 
     # Zero line
