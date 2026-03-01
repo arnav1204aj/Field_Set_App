@@ -239,8 +239,8 @@ def plot_intent_impact(
     min_count=5
 ):
     """
-    Plot cumulative intent impact curves (raw vs controlled)
-    for a single batter vs spin or pace.
+    Plot cumulative raw intent impact curve for a single batter
+    vs spin or pace.
     """
 
     batter_block = batter_stats or {}
@@ -265,9 +265,7 @@ def plot_intent_impact(
     # Backend JSON serializes dict keys to strings; convert back to int indices.
     cnts = _normalize_ball_indexed_map(data.get("batter_ith_ball_count", {}))
     raw_bat = _normalize_ball_indexed_map(data.get("batter_ith_ball_raw_runs", {}))
-    ctl_bat = _normalize_ball_indexed_map(data.get("batter_ith_ball_controlled_runs", {}))
     raw_ns = _normalize_ball_indexed_map(data.get("non_striker_ith_ball_raw_runs", {}))
-    ctl_ns = _normalize_ball_indexed_map(data.get("non_striker_ith_ball_controlled_runs", {}))
 
     valid = sorted(i for i in cnts if cnts[i] >= min_count)
     if not valid:
@@ -275,14 +273,10 @@ def plot_intent_impact(
 
     # ── Per-ball expected values
     raw_brpb = np.array([raw_bat[i] / cnts[i] for i in valid])
-    ctl_brpb = np.array([ctl_bat[i] / cnts[i] for i in valid])
-
     raw_nrpb = np.array([raw_ns.get(i, 0) / cnts[i] for i in valid])
-    ctl_nrpb = np.array([ctl_ns.get(i, 0) / cnts[i] for i in valid])
 
     # ── Cumulative intent impact
     raw_impact = np.cumsum(raw_brpb - raw_nrpb)
-    ctl_impact = np.cumsum(ctl_brpb - ctl_nrpb)
     def find_stable(impact):
         idx = next(
             (k for k, v in enumerate(impact)
@@ -292,7 +286,6 @@ def plot_intent_impact(
         return valid[idx] if idx is not None else None
 
     raw_stable = find_stable(raw_impact)
-    ctl_stable = find_stable(ctl_impact)
 
     # ─────────────────────────────
     # FIGURE SETUP
@@ -303,12 +296,10 @@ def plot_intent_impact(
 
     colors = {
         "raw": "#ff9100",        # orange
-        "controlled": "#00e5ff"  # cyan
     }
 
     # ── Glow layers
-    for impact, color in [(raw_impact, colors["raw"]),
-                          (ctl_impact, colors["controlled"])]:
+    for impact, color in [(raw_impact, colors["raw"])]:
         for lw, alpha in [(10, 0.06), (7, 0.10), (5, 0.14)]:
             ax.plot(valid, impact,
                     color=color,
@@ -323,12 +314,6 @@ def plot_intent_impact(
             linewidth=2.8,
             label="Raw intent impact",
             zorder=4)
-
-    ax.plot(valid, ctl_impact,
-            color=colors["controlled"],
-            linewidth=2.8,
-            label="Controlled intent impact",
-            zorder=5)
 
     # Zero line
     ax.axhline(0, color="white", linestyle="--",
@@ -365,10 +350,7 @@ def plot_intent_impact(
         spine.set_visible(False)
 
 
-    summary = (
-        f"Minimum balls for positive intent impact: {raw_stable}\n"
-        f"Minimum balls for positive controlled intent impact: {ctl_stable}"
-    )
+    summary = f"Minimum balls for positive intent impact: {raw_stable}"
 
     fig.text(
     0.25,          # centered horizontally

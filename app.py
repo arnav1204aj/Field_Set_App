@@ -1438,7 +1438,7 @@ if active_view == "Analysis":
                         Intent Impact for a ball is the extra runs batter adds to the team's total due to their intent on that ball.
                         Cumulative intent impact thus shows total extra runs as the innings progresses. The slope of the plot is an 
                         indicator of how much aggressive the batter is at that stage of the innings. A steeper positive slope means more aggression.
-                        Negative slope means batter is affecting the team's total negatively due to low intent. Controlled runs is a product of control and runs.
+                        Negative slope means batter is affecting the team's total negatively due to low intent.
                         Values are weighed to give roughly 50% weight to recent 2 years of data.
                     </p>
                 </div>
