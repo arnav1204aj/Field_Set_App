@@ -336,12 +336,7 @@ def plot_intent_impact(
     )
 
     # Legend
-    legend = ax.legend(loc="upper left", frameon=True,
-                       fontsize=11, labelcolor="white")
-    legend.get_frame().set_facecolor("#1a1a1a")
-    legend.get_frame().set_edgecolor("white")
-    legend.get_frame().set_linewidth(2)
-    legend.get_frame().set_alpha(0.9)
+    
 
     # Grid & axes
     ax.grid(True, linestyle="--", alpha=0.15)
