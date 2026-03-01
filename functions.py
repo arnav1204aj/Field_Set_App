@@ -348,7 +348,7 @@ def plot_intent_impact(
     summary = f"Minimum balls for positive intent impact: {raw_stable}"
 
     fig.text(
-    0.25,          # centered horizontally
+    0.5,           # centered horizontally
     -0.05,         # vertical position BELOW x-axis
     summary,
     ha="center",
