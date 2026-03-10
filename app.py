@@ -1801,7 +1801,7 @@ if active_view == "Rankings":
                             f'<div style="height:10px; border-radius:999px; background:rgba(15,23,42,0.92); border:1px solid rgba(148,163,184,0.35); overflow:hidden; {glow}">'
                             f'<div style="height:100%; width:{_bar_width(value):.2f}%; background:{fill_gradient};"></div>'
                             '</div>'
-                            f'<span style="text-align:left; font-size:0.82rem; color:{value_color}; font-weight:{"900" if is_active else "750"};">{value}</span>'
+                            f'<span style="text-align:left; font-size:1rem; color:{value_color}; font-weight:{"900" if is_active else "750"};">{value}</span>'
                             '</div>'
                         )
 
