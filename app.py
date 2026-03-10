@@ -1796,7 +1796,7 @@ if active_view == "Rankings":
                             else ""
                         )
                         return (
-                            '<div style="display:grid; grid-template-columns: 94px 1fr 58px; align-items:center; gap:0.55rem; margin-top:0.4rem;">'
+                            '<div style="display:grid; grid-template-columns: 94px 1fr 58px; align-items:center; gap:1.2rem; margin-top:0.4rem;">'
                             f'<span style="font-size:0.78rem; color:{label_color}; font-weight:{"800" if is_active else "700"}; letter-spacing:0.2px;">{label}</span>'
                             f'<div style="height:10px; border-radius:999px; background:rgba(15,23,42,0.92); border:1px solid rgba(148,163,184,0.35); overflow:hidden; {glow}">'
                             f'<div style="height:100%; width:{_bar_width(value):.2f}%; background:{fill_gradient};"></div>'
