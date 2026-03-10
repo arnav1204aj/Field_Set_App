@@ -1705,10 +1705,10 @@ if active_view == "Rankings":
             """
             <div class="info-card">
                 <p style="color: rgba(255,255,255,0.88); line-height: 1.7; font-size: 0.98rem; margin: 0;">
-                    <strong style="color: #fde68a;">This is an experimental and under development section.</strong>
-                    With global cricket moving towards leagues, ICC rankings (based on T20Is only) do not provide the full picture.
+                    <strong style="color: #fde68a;">With global cricket moving towards leagues, ICC rankings (based on T20Is only) do not provide the full picture.
                     The objective here is to build one unified ranking for T20 cricket.
-                    These rankings are computed using the last 2 years of league and international cricket data.
+                    These rankings are computed using the last 2 years of league and international cricket data.</strong>
+                    
                 </p>
             </div>
             """,
