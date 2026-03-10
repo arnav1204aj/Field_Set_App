@@ -1766,9 +1766,9 @@ if active_view == "Rankings":
                 for idx, row in rank_df.iterrows():
                     player = escape(str(row.get("batter", "-")))
                     original_rank = int(row.get("original_rank", 0) or 0)
-                    strike = float(row.get("strike_factor", 0) or 0)
-                    control = float(row.get("control_factor", 0) or 0)
-                    overall = float(row.get("composite_rank_score", 0) or 0)
+                    strike = int(round(float(row.get("strike_factor", 0) or 0)))
+                    control = int(round(float(row.get("control_factor", 0) or 0)))
+                    overall = int(round(float(row.get("composite_rank_score", 0) or 0)))
 
                     if idx % 2 == 0:
                         card_bg = "linear-gradient(135deg, rgba(17,24,39,0.78) 0%, rgba(30,41,59,0.58) 100%)"
@@ -1801,7 +1801,7 @@ if active_view == "Rankings":
                             f'<div style="height:10px; border-radius:999px; background:rgba(15,23,42,0.92); border:1px solid rgba(148,163,184,0.35); overflow:hidden; {glow}">'
                             f'<div style="height:100%; width:{_bar_width(value):.2f}%; background:{fill_gradient};"></div>'
                             '</div>'
-                            f'<span style="text-align:right; font-size:0.82rem; color:{value_color}; font-weight:{"900" if is_active else "750"};">{value:.3f}</span>'
+                            f'<span style="text-align:right; font-size:0.82rem; color:{value_color}; font-weight:{"900" if is_active else "750"};">{value}</span>'
                             '</div>'
                         )
 
