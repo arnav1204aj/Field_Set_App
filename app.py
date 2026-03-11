@@ -11,10 +11,10 @@ from typing import Dict, Any, List, Optional
 from html import escape
 
 
-# # # ─────────────────────────────
+
+# # ─────────────────────────────
 API_KEY = st.secrets["API_KEY"]
 BACKEND_URL = st.secrets["BACKEND_URL"]
-
 
 API_HEADERS = {"X-API-Key": API_KEY}
 REQUEST_TIMEOUT = 60
@@ -280,9 +280,9 @@ def fetch_shot_profile(mode: str, batter: str, bowl_kind: str, lengths: List[str
 
 
 @st.cache_data(ttl=600, max_entries=50)
-def fetch_rankings(mode: str, rank_type: str, sort_by: str, top_n: int = 0) -> List[Dict]:
+def fetch_rankings(mode: str, rank_type: str, sort_by: str, length_wt:str, top_n: int = 0) -> List[Dict]:
     """Fetch rankings for pace/spin from backend."""
-    response = make_request(f"/rankings/{mode}/{rank_type}?sort_by={sort_by}&top_n={top_n}")
+    response = make_request(f"/rankings/{mode}/{rank_type}/{length_wt}?sort_by={sort_by}&top_n={top_n}")
     return response.get("rankings", []) if response else []
 
 
@@ -1698,8 +1698,10 @@ if active_view == "Compare":
 # Rankings Tab
 if active_view == "Rankings":
     st.markdown('<p class="section-header">Rankings</p>', unsafe_allow_html=True)
+
     if current_mode != "MENS_T20":
         st.info("Rankings are currently available only for Men's T20.")
+
     else:
         st.markdown(
             """
@@ -1707,20 +1709,26 @@ if active_view == "Rankings":
                 <p style="color: rgba(255,255,255,0.88); line-height: 1.7; font-size: 0.98rem; margin: 0;">
                     With global cricket moving towards leagues, ICC rankings (based on T20Is only) do not provide the full picture.
                     <strong style="color: #fde68a;">The objective here is to build one unified ranking for T20 cricket.</strong>
-                    These rankings are computed using the last 2 years of league and international cricket data. </p> </div>
+                    These rankings are computed using the last 2 years of league and international cricket data.
+                </p>
+            </div>
             """,
             unsafe_allow_html=True,
         )
+
         rank_type_options = {
             "Pace": "pace",
             "Spin": "spin",
         }
+
         metric_options = {
             "Overall Quality Score": "overall",
             "Strike Factor": "strike_factor",
             "Control Factor": "control_factor",
         }
+
         f1, f2 = st.columns([1, 1], gap="small")
+
         with f1:
             selected_rank_type_label = st.selectbox(
                 "Type",
@@ -1728,6 +1736,7 @@ if active_view == "Rankings":
                 index=0,
                 key="rankings_type",
             )
+
         with f2:
             selected_metric_label = st.selectbox(
                 "Ranking Metric",
@@ -1735,34 +1744,61 @@ if active_view == "Rankings":
                 index=0,
                 key="rankings_metric",
             )
-        search_query = st.text_input("Search Player", value="", key="rankings_search")
 
         rank_type_key = rank_type_options[selected_rank_type_label]
+
+        # NEW CHECKBOX (only relevant for pace)
+        length_wt = "occ"
+        
+        equal_len = st.checkbox(
+            "Equal Length Weights",
+            value=False,
+            help="Treat all lengths equally instead of weighting by how often they occur for the batter."
+        )
+        length_wt = "equal" if equal_len else "occ"
+
+        search_query = st.text_input("Search Player", value="", key="rankings_search")
+
         metric_key = metric_options[selected_metric_label]
+
         metric_col = {
             "overall": "composite_rank_score",
             "strike_factor": "strike_factor",
             "control_factor": "control_factor",
         }[metric_key]
 
-        rows = fetch_rankings(current_mode, rank_type_key, metric_key, top_n=0)
+        # UPDATED API CALL
+        rows = fetch_rankings(current_mode, rank_type_key, metric_key, length_wt, top_n=0)
+
         if not rows:
             st.warning(f"No {selected_rank_type_label.lower()} rankings available.")
         else:
             rank_df = pd.DataFrame(rows).reset_index(drop=True)
             rank_df["original_rank"] = rank_df.index + 1
+
             if search_query.strip():
                 q = search_query.strip().lower()
-                rank_df = rank_df[rank_df["batter"].astype(str).str.lower().str.contains(q, na=False)]
+                rank_df = rank_df[
+                    rank_df["batter"].astype(str).str.lower().str.contains(q, na=False)
+                ]
+
             if rank_df.empty:
                 st.info("No player matched your search.")
+
             else:
                 rank_df = rank_df.reset_index(drop=True)
-                st.caption(f"{selected_rank_type_label} rankings | {selected_metric_label} | {len(rank_df)} players")
+
+                st.caption(
+                    f"{selected_rank_type_label} rankings | {selected_metric_label} | {len(rank_df)} players"
+                )
+
                 cards = []
+
                 for idx, row in rank_df.iterrows():
+
                     player = escape(str(row.get("batter", "-")))
                     original_rank = int(row.get("original_rank", 0) or 0)
+
                     strike = int(round(float(row.get("strike_factor", 0) or 0)))
                     control = int(round(float(row.get("control_factor", 0) or 0)))
                     overall = int(round(float(row.get("composite_rank_score", 0) or 0)))
@@ -1779,19 +1815,24 @@ if active_view == "Rankings":
                         return max(0.0, min(100.0, pct))
 
                     def _bar(label: str, value: float, key: str) -> str:
+
                         is_active = (metric_col == key)
+
                         fill_gradient = (
                             "linear-gradient(90deg, #22d3ee 0%, #0284c7 100%)"
                             if is_active
                             else "linear-gradient(90deg, #475569 0%, #334155 100%)"
                         )
+
                         value_color = "#ffffff" if is_active else "rgba(226,232,240,0.95)"
                         label_color = "#e0f2fe" if is_active else "rgba(203,213,225,0.92)"
+
                         glow = (
                             "box-shadow: 0 0 0 2px rgba(34,211,238,0.45), 0 0 18px rgba(34,211,238,0.25);"
                             if is_active
                             else ""
                         )
+
                         return (
                             '<div style="display:grid; grid-template-columns: 94px 1fr 58px; align-items:center; gap:1.2rem; margin-top:0.4rem;">'
                             f'<span style="font-size:0.78rem; color:{label_color}; font-weight:{"800" if is_active else "700"}; letter-spacing:0.2px;">{label}</span>'
@@ -1816,7 +1857,9 @@ if active_view == "Rankings":
                             '</div>'
                         )
                     )
+
                 cards_html = "".join(cards)
+
                 st.markdown(
                     f"""
                     <div style="max-height: 100vh; overflow-y: auto; padding-right: 0.25rem;">
