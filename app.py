@@ -1699,8 +1699,8 @@ if active_view == "Compare":
 if active_view == "Rankings":
     st.markdown('<p class="section-header">Rankings</p>', unsafe_allow_html=True)
 
-    if current_mode != "MENS_T20":
-        st.info("Rankings are currently available only for Men's T20.")
+    if current_mode == "MENS_ODI":
+        st.info("Rankings are currently not available for Mens ODI")
 
     else:
         st.markdown(
