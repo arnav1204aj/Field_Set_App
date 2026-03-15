@@ -780,14 +780,15 @@ st.markdown("""
     }
 
     .logo-container {
-        display: flex;
+        display: flex !important;
         align-items: center;
         flex-shrink: 0;
     }
 
-    @media (max-width: 768px) {
+    @media (max-width: 600px) {
         .logo-container {
-            display: none;
+            display: none !important;
+        }
         }
         
         .main-header {
