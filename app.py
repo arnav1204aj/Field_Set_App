@@ -555,18 +555,19 @@ st.markdown("""
     
     .main-header {
         background: linear-gradient(135deg, #991b1b 0%, #dc2626 100%);
-        padding: clamp(2.5rem, 6vw, 3.5rem);
+        padding: clamp(1rem, 3vw, 2.5rem);
         border-radius: 16px;
         margin-bottom: 2rem;
         box-shadow: 0 10px 40px rgba(220,38,38,0.4);
         border: 1px solid rgba(255,255,255,0.1);
         display: flex;
         align-items: center;
-        gap: 3rem;
+        gap: clamp(1rem, 2vw, 2rem);
+        flex-wrap: wrap;
     }
     
     .main-title {
-        font-size: clamp(4rem, 9vw, 5.5rem);
+        font-size: clamp(2rem, 5vw, 4rem);
         font-weight: 800;
         color: white;
         margin: 0;
@@ -584,14 +585,14 @@ st.markdown("""
     }
     
     .author-name {
-        font-size: clamp(1.3rem, 3vw, 1.6rem);
+        font-size: clamp(0.8rem, 2vw, 1.2rem);
         font-weight: 600;
         color: rgba(255,255,255,0.95);
         margin: 0;
     }
     
     .author-link {
-        font-size: clamp(1.15rem, 2.5vw, 1.3rem);
+        font-size: clamp(0.75rem, 1.8vw, 1.1rem);
         color: #fca5a5;
         text-decoration: none;
         padding: 0.3rem 0.8rem;
@@ -780,21 +781,12 @@ st.markdown("""
     }
 
     .logo-container {
-        display: flex !important;
+        display: flex;
         align-items: center;
         flex-shrink: 0;
     }
 
-    @media (max-width: 600px) {
-        .logo-container {
-            display: none !important;
-        }
-        }
-        
-        .main-header {
-            padding: 1.5rem 1rem;
-            margin-bottom: 1.5rem;
-        }
+    @media (max-width: 768px) {
         
         div[data-testid="metric-container"] {
             margin-bottom: 0.5rem;
@@ -906,7 +898,7 @@ except:
 st.markdown(f"""
 <div class="main-header">
     <a href="https://arnavj.substack.com/" target="_blank" class="logo-container">
-        <img src="{logo_data_url}" alt="Logo" style="height: 150px; width: auto; object-fit: contain;">
+        <img src="{logo_data_url}" alt="Logo" style="height: clamp(60px, 12vw, 140px); width: auto; object-fit: contain;">
     </a>
     <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
         <h1 class="main-title" style="margin: 0;">{mode_title} - Optimal Field Setting</h1>
