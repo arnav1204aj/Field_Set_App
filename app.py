@@ -16,6 +16,7 @@ from html import escape
 API_KEY = st.secrets["API_KEY"]
 BACKEND_URL = st.secrets["BACKEND_URL"]
 
+
 API_HEADERS = {"X-API-Key": API_KEY}
 REQUEST_TIMEOUT = 60
 MAX_RETRIES = 4
@@ -554,15 +555,18 @@ st.markdown("""
     
     .main-header {
         background: linear-gradient(135deg, #991b1b 0%, #dc2626 100%);
-        padding: clamp(1.5rem, 4vw, 2.5rem) clamp(1rem, 3vw, 2rem);
+        padding: clamp(2.5rem, 6vw, 3.5rem);
         border-radius: 16px;
         margin-bottom: 2rem;
         box-shadow: 0 10px 40px rgba(220,38,38,0.4);
         border: 1px solid rgba(255,255,255,0.1);
+        display: flex;
+        align-items: center;
+        gap: 3rem;
     }
     
     .main-title {
-        font-size: clamp(2rem, 5vw, 2.8rem);
+        font-size: clamp(4rem, 9vw, 5.5rem);
         font-weight: 800;
         color: white;
         margin: 0;
@@ -573,21 +577,21 @@ st.markdown("""
         display: flex;
         align-items: center;
         gap: 1rem;
-        margin-top: 1rem;
-        padding-top: 1rem;
-        border-top: 1px solid rgba(255,255,255,0.15);
+        margin-top: 0.5rem;
+        padding-top: 0;
+        border-top: none;
         flex-wrap: wrap;
     }
     
     .author-name {
-        font-size: clamp(0.85rem, 2vw, 1rem);
+        font-size: clamp(1.3rem, 3vw, 1.6rem);
         font-weight: 600;
         color: rgba(255,255,255,0.95);
         margin: 0;
     }
     
     .author-link {
-        font-size: clamp(0.8rem, 1.8vw, 0.9rem);
+        font-size: clamp(1.15rem, 2.5vw, 1.3rem);
         color: #fca5a5;
         text-decoration: none;
         padding: 0.3rem 0.8rem;
@@ -878,12 +882,27 @@ current_mode = st.session_state['current_mode']
 
 # Header
 mode_title = MODES.get(current_mode, 'Optimal Field Setting')
+
+# Load logo as base64
+import base64
+try:
+    with open('logotrans.png', 'rb') as f:
+        logo_base64 = base64.b64encode(f.read()).decode('utf-8')
+    logo_data_url = f"data:image/png;base64,{logo_base64}"
+except:
+    logo_data_url = ""
+
 st.markdown(f"""
 <div class="main-header">
-    <h1 class="main-title">{mode_title} - Optimal Field Setting</h1>
-    <div class="author-info">
-        <span class="author-name">Arnav Jain | IITK</span>
-        <a href="https://x.com/arnav1204aj" target="_blank" class="author-link">@arnav1204aj</a>
+    <a href="https://arnavj.substack.com/" target="_blank" style="display: flex; align-items: center; flex-shrink: 0;">
+        <img src="{logo_data_url}" alt="Logo" style="height: 150px; width: auto; object-fit: contain;">
+    </a>
+    <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
+        <h1 class="main-title" style="margin: 0;">{mode_title} - Optimal Field Setting</h1>
+        <div class="author-info" style="margin: 0.3rem 0 0 0; padding: 0; border: none;">
+            <span class="author-name">Arnav Jain | IITK</span>
+            <a href="https://x.com/arnav1204aj" target="_blank" class="author-link">@arnav1204aj</a>
+        </div>
     </div>
 </div>
 """, unsafe_allow_html=True)
