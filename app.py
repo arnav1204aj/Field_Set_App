@@ -779,7 +779,17 @@ st.markdown("""
         font-size: clamp(1rem, 2vw, 1.1rem) !important;
     }
 
+    .logo-container {
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
     @media (max-width: 768px) {
+        .logo-container {
+            display: none;
+        }
+        
         .main-header {
             padding: 1.5rem 1rem;
             margin-bottom: 1.5rem;
@@ -894,7 +904,7 @@ except:
 
 st.markdown(f"""
 <div class="main-header">
-    <a href="https://arnavj.substack.com/" target="_blank" style="display: flex; align-items: center; flex-shrink: 0;">
+    <a href="https://arnavj.substack.com/" target="_blank" class="logo-container">
         <img src="{logo_data_url}" alt="Logo" style="height: 150px; width: auto; object-fit: contain;">
     </a>
     <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
