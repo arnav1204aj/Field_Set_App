@@ -1769,15 +1769,7 @@ if active_view == "Rankings":
 
         rank_type_key = rank_type_options[selected_rank_type_label]
 
-        # NEW CHECKBOX (only relevant for pace)
         length_wt = "occ"
-        
-        equal_len = st.checkbox(
-            "Equal Length Weights",
-            value=False,
-            help="Treat all lengths equally instead of weighting by how often they occur for the batter."
-        )
-        length_wt = "equal" if equal_len else "occ"
 
         search_query = st.text_input("Search Player", value="", key="rankings_search")
 
