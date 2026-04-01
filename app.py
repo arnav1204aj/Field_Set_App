@@ -281,9 +281,9 @@ def fetch_shot_profile(mode: str, batter: str, bowl_kind: str, lengths: List[str
 
 
 @st.cache_data(ttl=600, max_entries=50)
-def fetch_rankings(mode: str, rank_type: str, sort_by: str, length_wt:str, top_n: int = 0) -> List[Dict]:
-    """Fetch rankings for pace/spin from backend."""
-    response = make_request(f"/rankings/{mode}/{rank_type}/{length_wt}?sort_by={sort_by}&top_n={top_n}")
+def fetch_rankings(mode: str, rank_type: str, sort_by: str, version: str = "new", top_n: int = 0) -> List[Dict]:
+    """Fetch rankings for pace/spin from backend. version = 'old' or 'new'."""
+    response = make_request(f"/rankings/{mode}/{rank_type}/{version}?sort_by={sort_by}&top_n={top_n}")
     return response.get("rankings", []) if response else []
 
 
@@ -1769,8 +1769,6 @@ if active_view == "Rankings":
 
         rank_type_key = rank_type_options[selected_rank_type_label]
 
-        length_wt = "occ"
-
         search_query = st.text_input("Search Player", value="", key="rankings_search")
 
         metric_key = metric_options[selected_metric_label]
@@ -1781,13 +1779,22 @@ if active_view == "Rankings":
             "control_factor": "control_factor",
         }[metric_key]
 
-        # UPDATED API CALL
-        rows = fetch_rankings(current_mode, rank_type_key, metric_key, length_wt, top_n=0)
+        # Fetch NEW rankings (primary display)
+        rows_new = fetch_rankings(current_mode, rank_type_key, metric_key, version="new", top_n=0)
 
-        if not rows:
+        # Fetch OLD rankings for rank-change calculation (Men's T20 only)
+        old_rank_map: Dict[str, int] = {}
+        if current_mode == "MENS_T20" and rows_new:
+            rows_old = fetch_rankings(current_mode, rank_type_key, metric_key, version="old", top_n=0)
+            if rows_old:
+                old_df = pd.DataFrame(rows_old).reset_index(drop=True)
+                old_df["old_rank"] = old_df.index + 1
+                old_rank_map = dict(zip(old_df["batter"].astype(str), old_df["old_rank"].astype(int)))
+
+        if not rows_new:
             st.warning(f"No {selected_rank_type_label.lower()} rankings available.")
         else:
-            rank_df = pd.DataFrame(rows).reset_index(drop=True)
+            rank_df = pd.DataFrame(rows_new).reset_index(drop=True)
             rank_df["original_rank"] = rank_df.index + 1
 
             if search_query.strip():
@@ -1816,6 +1823,36 @@ if active_view == "Rankings":
                     strike = int(round(float(row.get("strike_factor", 0) or 0)))
                     control = int(round(float(row.get("control_factor", 0) or 0)))
                     overall = int(round(float(row.get("composite_rank_score", 0) or 0)))
+
+                    # Rank change badge (Men's T20 only)
+                    rank_change_html = ""
+                    if current_mode == "MENS_T20" and old_rank_map:
+                        player_name = str(row.get("batter", ""))
+                        old_rank = old_rank_map.get(player_name)
+                        if old_rank is not None:
+                            change = old_rank - original_rank  # positive = moved up
+                            if change > 0:
+                                rank_change_html = (
+                                    f'<span style="font-size:0.78rem; font-weight:800; color:#22c55e; '
+                                    f'background:rgba(34,197,94,0.15); border:1px solid rgba(34,197,94,0.4); '
+                                    f'border-radius:6px; padding:0.08rem 0.4rem; margin-left:0.35rem;">'
+                                    f'&#9650; {change}</span>'
+                                )
+                            elif change < 0:
+                                rank_change_html = (
+                                    f'<span style="font-size:0.78rem; font-weight:800; color:#ef4444; '
+                                    f'background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); '
+                                    f'border-radius:6px; padding:0.08rem 0.4rem; margin-left:0.35rem;">'
+                                    f'&#9660; {abs(change)}</span>'
+                                )
+                            # change == 0: no badge
+                        else:
+                            # New entrant
+                            rank_change_html = (
+                                '<span style="font-size:0.72rem; font-weight:800; color:#a78bfa; '
+                                'background:rgba(167,139,250,0.15); border:1px solid rgba(167,139,250,0.4); '
+                                'border-radius:6px; padding:0.08rem 0.4rem; margin-left:0.35rem;">NEW</span>'
+                            )
 
                     if idx % 2 == 0:
                         card_bg = "linear-gradient(135deg, rgba(17,24,39,0.78) 0%, rgba(30,41,59,0.58) 100%)"
@@ -1864,6 +1901,7 @@ if active_view == "Rankings":
                             '<span style="font-size:0.86rem; color:#e0f2fe; font-weight:900; background:rgba(56,189,248,0.2); border:1px solid rgba(56,189,248,0.5); border-radius:999px; padding:0.11rem 0.55rem;">'
                             f'#{original_rank}</span>'
                             f'<span style="font-size:1.01rem; color:#ffffff; font-weight:760; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{player}</span>'
+                            f'{rank_change_html}'
                             '</div>'
                             f'{_bar("Strike", strike, "strike_factor")}'
                             f'{_bar("Control", control, "control_factor")}'
