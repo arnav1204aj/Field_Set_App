@@ -3,7 +3,17 @@ st.set_page_config(layout="wide", page_title="Optimal Field Setting | Cricket An
 
 import pandas as pd
 import numpy as np
-from functions import plot_int_wagons, plot_intent_impact, plot_field_setting, plot_intrel_pitch, plot_intrel_pitch_avg, plot_intrel_pitch_batter, plot_sector_ev_heatmap, create_shot_profile_chart, create_similarity_chart, create_zone_strength_table, get_top_similar_batters
+from functions import plot_int_wagons, plot_intent_impact, plot_field_setting, plot_intrel_pitch, plot_intrel_pitch_avg, plot_intrel_pitch_batter, plot_sector_ev_heatmap, create_shot_profile_chart, create_similarity_chart, create_zone_strength_table, get_top_similar_batters, generate_player_profile_card
+
+
+
+# from paywall import (
+#     render_auth_ui,
+#     get_accessible_batters,
+#     filter_compare_batters,
+#     render_batter_limit_notice,
+#     is_premium_user,
+# )
 
 import requests
 import time
