@@ -7,13 +7,13 @@ from functions import plot_int_wagons, plot_intent_impact, plot_field_setting, p
 
 
 
-from paywall import (
-    render_auth_ui,
-    get_accessible_batters,
-    filter_compare_batters,
-    render_batter_limit_notice,
-    is_premium_user,
-)
+# from paywall import (
+#     render_auth_ui,
+#     get_accessible_batters,
+#     filter_compare_batters,
+#     render_batter_limit_notice,
+#     is_premium_user,
+# )
 
 import requests
 import time
@@ -23,10 +23,9 @@ from html import escape
 
 
 # # ─────────────────────────────
-# API_KEY = st.secrets["API_KEY"]
-# BACKEND_URL = st.secrets["BACKEND_URL"]
-API_KEY = 'Annupari1204!'
-BACKEND_URL = "https://web-production-e978e.up.railway.app"
+API_KEY = st.secrets["API_KEY"]
+BACKEND_URL = st.secrets["BACKEND_URL"]
+
 
 API_HEADERS = {"X-API-Key": API_KEY}
 REQUEST_TIMEOUT = 60
@@ -844,11 +843,6 @@ st.markdown("""
 # Mode Selection Interface
 # ─────────────────────────────
 
-# ─────────────────────────────
-# Auth UI (sidebar login/signup/logout + subscription status)
-# ─────────────────────────────
-render_auth_ui()
-
 if st.session_state['current_mode'] is None:
     st.markdown("""
     <div style="
@@ -1015,13 +1009,10 @@ if active_view == "Analysis":
             submit = st.form_submit_button("Generate Results", use_container_width=True)
             st.markdown('Suggestion: Avoid Short length for spinners, results might be weird due to sparsity.')
 
-            _all_batters = fetch_batters(current_mode)
-            if not _all_batters:
+            batter_list = fetch_batters(current_mode)
+            if not batter_list:
                 st.error('No batters available for selected mode.')
                 st.stop()
-
-            batter_list, _full_access = get_accessible_batters(current_mode, _all_batters)
-            render_batter_limit_notice(_full_access, current_mode)
 
             default_batter = "Smriti Mandhana" if current_mode == 'WOMENS_T20' else "Virat Kohli"
             default_index = batter_list.index(default_batter) if default_batter in batter_list else 0
@@ -1530,12 +1521,10 @@ if active_view == "Analysis":
 if active_view == "Compare":
     with st.sidebar:
         st.markdown('<p class="section-header">Compare Filters</p>', unsafe_allow_html=True)
-        _all_compare_batters = fetch_batters(current_mode)
-        if not _all_compare_batters:
+        compare_batters = fetch_batters(current_mode)
+        if not compare_batters:
             st.error("No batters available for selected mode.")
             st.stop()
-        compare_batters, _cmp_full = filter_compare_batters(current_mode, _all_compare_batters)
-        render_batter_limit_notice(_cmp_full, current_mode)
         if len(compare_batters) < 2:
             st.error("Need at least two batters to compare.")
             st.stop()
@@ -2014,7 +2003,7 @@ if active_view == "IPL Batter Profiles":
     }
     </style>
     <p class="ipl-profile-header">IPL Batter Profiles</p>
-    <p class="ipl-profile-sub">Select a player to view their detailed batting profile card with pace &amp; spin rankings (since 2024)</p>
+    <p class="ipl-profile-sub">Select a player to view their detailed batting profile card with pace &amp; spin rankings</p>
     """, unsafe_allow_html=True)
 
     # Load batter list from local IPL rankings CSV
@@ -2115,12 +2104,5 @@ if active_view == "Information":
          Mens ODIs - since 2014, Mens T20s - since 2015, Womens T20s - since 2020                
     </div>
     """, unsafe_allow_html=True)
-
-
-
-
-
-
-
 
 
