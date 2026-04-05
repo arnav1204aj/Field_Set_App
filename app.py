@@ -2003,7 +2003,7 @@ if active_view == "IPL Batter Profiles":
     }
     </style>
     <p class="ipl-profile-header">IPL Batter Profiles</p>
-    <p class="ipl-profile-sub">Select a player to view their detailed batting profile card with pace &amp; spin rankings</p>
+    <p class="ipl-profile-sub">Select a player to view their detailed batting profile card with pace &amp; spin rankings (since 2024)</p>
     """, unsafe_allow_html=True)
 
     # Load batter list from local IPL rankings CSV
