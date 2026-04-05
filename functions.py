@@ -5,11 +5,18 @@ import numpy as np
 import matplotlib.pyplot as plt
 import streamlit as st
 import matplotlib.patches as patches
+import matplotlib.colors as mcolors
+import matplotlib.image as mpimg
 import pandas as pd
+import os
+import io
+import requests as _req
 
 from matplotlib.colors import Normalize
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import LinearSegmentedColormap
+from matplotlib.patches import FancyBboxPatch
+from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
 
 import numpy as np
@@ -1989,6 +1996,330 @@ def plot_intrel_pitch_batter(
         clip_on=False
     )
 
+    return fig
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# IPL Player Profile Card
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Team metadata keyed by abbreviation (logo files live under logos/)
+_TEAM_META_BY_ABBR = {
+    "CSK":  {"primary": "#FFCC00", "secondary": "#0066B2", "logo": "logos/csk.png"},
+    "DC":   {"primary": "#004C93", "secondary": "#EF1B23", "logo": "logos/dc.png"},
+    "GT":   {"primary": "#1B2133", "secondary": "#E2E787", "logo": "logos/gt.png"},
+    "KKR":  {"primary": "#3A225D", "secondary": "#FFD700", "logo": "logos/kkr.png"},
+    "LSG":  {"primary": "#E71D06", "secondary": "#0E33EE", "logo": "logos/lsg.png"},
+    "MI":   {"primary": "#004BA0", "secondary": "#D4AF37", "logo": "logos/mi.png"},
+    "PBKS": {"primary": "#DD1F2D", "secondary": "#272AC4", "logo": "logos/pbks.png"},
+    "RR":   {"primary": "#EA1A85", "secondary": "#254AA5", "logo": "logos/rr.png"},
+    "RCB":  {"primary": "#A71930", "secondary": "#2505C6", "logo": "logos/rcb.png"},
+    "SRH":  {"primary": "#FF671F", "secondary": "#000000", "logo": "logos/srh.png"},
+}
+
+
+def _pp_luminance(hex_color: str) -> float:
+    r, g, b = mcolors.to_rgb(hex_color)
+    return 0.299 * r + 0.587 * g + 0.114 * b
+
+
+def _pp_text_color(bg: str) -> str:
+    return "#000000" if _pp_luminance(bg) > 0.5 else "#FFFFFF"
+
+
+def _pp_lighten(hex_color: str, factor: float = 0.3) -> str:
+    r, g, b = mcolors.to_rgb(hex_color)
+    if factor >= 0:
+        r, g, b = r + (1 - r) * factor, g + (1 - g) * factor, b + (1 - b) * factor
+    else:
+        f = -factor
+        r, g, b = r * (1 - f), g * (1 - f), b * (1 - f)
+    return mcolors.to_hex((max(0, min(1, r)), max(0, min(1, g)), max(0, min(1, b))))
+
+
+def _pp_load_logo(filename: str, target_h: int = 80):
+    if not filename or not os.path.exists(filename):
+        return None
+    img = mpimg.imread(filename)
+    zoom = target_h / img.shape[0] if img.shape[0] > 0 else 0.3
+    return OffsetImage(img, zoom=zoom)
+
+
+def _pp_load_player_image_from_url(image_url: str, target_h: int = 190):
+    """Download headshot from IPL CDN and return an OffsetImage, or None."""
+    if not image_url:
+        return None
+    try:
+        resp = _req.get(image_url, timeout=12)
+        if resp.status_code != 200 or len(resp.content) < 500:
+            return None
+        from PIL import Image
+        img_pil = Image.open(io.BytesIO(resp.content)).convert("RGBA")
+        img_arr = np.array(img_pil) / 255.0
+        zoom = target_h / img_arr.shape[0] if img_arr.shape[0] > 0 else 0.3
+        return OffsetImage(img_arr, zoom=zoom)
+    except Exception:
+        return None
+
+
+def _pp_draw_stat_row(ax, x_left, y_center, bar_w, bar_h, value, max_val,
+                      fill_color, secondary_color, label, rank_val, total):
+    """Draw a single stat row on the profile card."""
+    ax.text(x_left, y_center, label,
+            fontsize=15, fontweight="bold", color="#CCCCCC",
+            ha="left", va="center", family="sans-serif", zorder=5)
+
+    bx = x_left + 2.4
+    ax.add_patch(FancyBboxPatch(
+        (bx, y_center - bar_h / 2), bar_w, bar_h,
+        boxstyle="round,pad=0.02",
+        facecolor="#1a1a2e", edgecolor="#2a2a42", linewidth=0.6, zorder=3,
+    ))
+
+    fill_w = max(0.06, (value / max_val) * bar_w) if max_val > 0 else 0
+    ax.add_patch(FancyBboxPatch(
+        (bx, y_center - bar_h / 2), fill_w, bar_h,
+        boxstyle="round,pad=0.02",
+        facecolor=fill_color, edgecolor="none", zorder=4,
+    ))
+
+    ax.text(bx + bar_w + 0.18, y_center, f"{value:.1f}",
+            fontsize=16, fontweight="black", color="#FFFFFF",
+            ha="left", va="center", family="sans-serif", zorder=5)
+
+    chip_x = bx + bar_w + 1.35
+    ax.add_patch(FancyBboxPatch(
+        (chip_x - 0.38, y_center - 0.20), 0.76, 0.40,
+        boxstyle="round,pad=0.06",
+        facecolor=secondary_color, edgecolor="none", zorder=4,
+    ))
+    chip_text_col = _pp_text_color(secondary_color)
+    ax.text(chip_x, y_center, f"#{rank_val}",
+            fontsize=14, fontweight="black", color=chip_text_col,
+            ha="center", va="center", family="sans-serif", zorder=5)
+
+    ax.text(chip_x + 0.55, y_center, f"/{total}",
+            fontsize=11, fontweight="bold", color="#666666",
+            ha="left", va="center", family="sans-serif", zorder=5)
+
+
+def generate_player_profile_card(
+    player_name: str,
+    pace_rankings: list,
+    spin_rankings: list,
+    image_url: str | None = None,
+    team_abbr: str | None = None,
+) -> plt.Figure | None:
+    """
+    Generate a matplotlib player profile card.
+
+    Parameters
+    ----------
+    player_name : str
+    pace_rankings : list of dicts with batter, strike_factor, control_factor, composite_rank_score
+    spin_rankings : list of dicts with same keys
+    image_url : str or None  – IPL CDN headshot URL
+    team_abbr : str or None  – e.g. "CSK", "MI"
+
+    Returns
+    -------
+    matplotlib Figure or None if player not found in any ranking.
+    """
+
+    # Build ranked DataFrames
+    def _build_ranked(rows):
+        if not rows:
+            return pd.DataFrame()
+        df = pd.DataFrame(rows)
+        for c in ("strike_factor", "control_factor", "composite_rank_score"):
+            df[c] = pd.to_numeric(df[c], errors="coerce")
+        df = df.dropna(subset=["strike_factor", "control_factor", "composite_rank_score"])
+        df["overall_rank"] = df["composite_rank_score"].rank(ascending=False, method="min").astype(int)
+        df["strike_rank"] = df["strike_factor"].rank(ascending=False, method="min").astype(int)
+        df["control_rank"] = df["control_factor"].rank(ascending=False, method="min").astype(int)
+        return df
+
+    pace_df = _build_ranked(pace_rankings)
+    spin_df = _build_ranked(spin_rankings)
+
+    def _extract(df, name):
+        if df.empty:
+            return None
+        row = df[df["batter"].str.strip() == name.strip()]
+        if row.empty:
+            return None
+        r = row.iloc[0]
+        return {
+            "strike_factor": float(r["strike_factor"]),
+            "control_factor": float(r["control_factor"]),
+            "composite": float(r["composite_rank_score"]),
+            "overall_rank": int(r["overall_rank"]),
+            "strike_rank": int(r["strike_rank"]),
+            "control_rank": int(r["control_rank"]),
+        }
+
+    pace = _extract(pace_df, player_name)
+    spin = _extract(spin_df, player_name)
+    pace_total = len(pace_df) if not pace_df.empty else 0
+    spin_total = len(spin_df) if not spin_df.empty else 0
+
+    if pace is None and spin is None:
+        return None
+
+    # Team metadata
+    meta = _TEAM_META_BY_ABBR.get((team_abbr or "").upper(), {})
+    primary = meta.get("primary", "#444444")
+    secondary = meta.get("secondary", "#222222")
+    abbr = (team_abbr or "???").upper()
+    logo_file = meta.get("logo", "")
+
+    # ── Figure ──────────────────────────────────────────
+    BG = "#0a0a14"
+    fig_w, fig_h = 11, 10.8
+    fig, ax = plt.subplots(figsize=(fig_w, fig_h), facecolor=BG)
+    fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
+    ax.set_xlim(0, fig_w)
+    ax.set_ylim(0, fig_h)
+    ax.axis("off")
+    ax.set_facecolor(BG)
+
+    PAD = 0.45
+
+    # ══ HERO SECTION ══════════════════════════════════════
+    hero_h = 2.8
+    hero_top = fig_h - PAD
+    hero_bot = hero_top - hero_h
+
+    ax.add_patch(FancyBboxPatch(
+        (PAD, hero_bot), fig_w - 2 * PAD, hero_h,
+        boxstyle="round,pad=0.12",
+        facecolor=primary, edgecolor="none", zorder=2,
+    ))
+
+    panel_w = 3.2
+    ax.add_patch(plt.Rectangle(
+        (PAD, hero_bot), panel_w, hero_h,
+        facecolor=secondary, edgecolor="none", zorder=3,
+        clip_on=True,
+    ))
+
+    # Player image
+    img_cx = PAD + panel_w / 2
+    img_cy = hero_bot
+    has_image = False
+
+    player_img = _pp_load_player_image_from_url(image_url, target_h=190)
+    if player_img:
+        ab_img = AnnotationBbox(player_img, (img_cx, img_cy),
+                                frameon=False, zorder=5,
+                                box_alignment=(0.5, 0.0))
+        ax.add_artist(ab_img)
+        clip_rect = plt.Rectangle((PAD, hero_bot), panel_w, hero_h,
+                                   transform=ax.transData)
+        ab_img.set_clip_path(clip_rect)
+        has_image = True
+
+    if not has_image:
+        # Empty silhouette placeholder
+        ax.text(img_cx, hero_bot + hero_h / 2, "👤",
+                fontsize=60, ha="center", va="center",
+                color="rgba(255,255,255,0.15)", zorder=5)
+
+    # Text block
+    tx = (PAD + panel_w + 0.6) if has_image else (PAD + panel_w + 0.6)
+    mid_y = hero_bot + hero_h / 2
+    hdr_text = _pp_text_color(primary)
+
+    ax.text(tx, mid_y + 0.35, player_name.upper(),
+            fontsize=24, fontweight="black", color=secondary,
+            ha="left", va="center", family="sans-serif", zorder=5)
+
+    ax.text(tx, mid_y - 0.10, abbr,
+            fontsize=15, fontweight="black", color=secondary,
+            ha="left", va="center", family="sans-serif", zorder=5)
+
+    ax.text(tx, mid_y - 0.50, "B A T T E R   P R O F I L E",
+            fontsize=8, fontweight="bold", color=_pp_lighten(hdr_text, -0.3),
+            ha="left", va="center", family="sans-serif", zorder=5)
+
+    # Team logo
+    logo = _pp_load_logo(logo_file, target_h=60)
+    if logo:
+        ab_logo = AnnotationBbox(logo,
+                                 (fig_w - PAD - 0.8, hero_top - 0.55),
+                                 frameon=False, zorder=5)
+        ax.add_artist(ab_logo)
+
+    # ══ STATS SECTIONS ════════════════════════════════════
+    full_w = fig_w - 2 * PAD
+    section_labels = ["VS PACE", "VS SPIN"]
+    sections = [pace, spin]
+    totals = [pace_total, spin_total]
+
+    metrics = [
+        ("Strike Factor", "strike_factor", "strike_rank"),
+        ("Control Factor", "control_factor", "control_rank"),
+        ("Overall Score",  "composite",      "overall_rank"),
+    ]
+
+    bar_w = 4.0
+    bar_h = 0.36
+    row_gap = 0.82
+    section_gap = 0.35
+    header_h = 0.65
+    header_pad = 0.30
+    bottom_pad = 0.05
+
+    y = hero_bot - 0.50
+
+    for sec_label, sec_data, total in zip(section_labels, sections, totals):
+        n_rows = len(metrics) if sec_data else 1
+        body_h = (n_rows - 1) * row_gap + bar_h + bottom_pad
+        sec_h = header_h + header_pad + body_h
+        sec_top_y = y
+        sec_bot_y = y - sec_h
+
+        ax.add_patch(FancyBboxPatch(
+            (PAD, sec_bot_y), full_w, sec_h,
+            boxstyle="round,pad=0.10",
+            facecolor="#0f0f20", edgecolor=_pp_lighten(primary, -0.55),
+            linewidth=1.0, zorder=2,
+        ))
+
+        hdr_top = sec_top_y
+        hdr_bot = sec_top_y - header_h
+        ax.add_patch(FancyBboxPatch(
+            (PAD, hdr_bot), full_w, header_h,
+            boxstyle="round,pad=0.10",
+            facecolor=primary, edgecolor="none", zorder=3,
+        ))
+        hdr_text_col = _pp_text_color(primary)
+        ax.text(PAD + 0.35, hdr_bot + header_h / 2, sec_label,
+                fontsize=17, fontweight="black", color=hdr_text_col,
+                ha="left", va="center", family="sans-serif", zorder=5)
+
+        ax.plot([PAD + 0.10, PAD + full_w - 0.10],
+                [hdr_bot, hdr_bot],
+                color=secondary, linewidth=3, zorder=4, solid_capstyle="round")
+
+        row_y = hdr_bot - header_pad - 0.15
+
+        if sec_data is None:
+            ax.text(PAD + full_w / 2, row_y - 0.2, "Not ranked",
+                    fontsize=13, fontweight="bold", color="#444444",
+                    ha="center", va="center", family="sans-serif", zorder=5)
+        else:
+            for metric_label, metric_key, rank_key in metrics:
+                _pp_draw_stat_row(ax, PAD + 0.35, row_y, bar_w, bar_h,
+                                  sec_data[metric_key], 100.0,
+                                  primary, secondary,
+                                  metric_label,
+                                  sec_data[rank_key], total)
+                row_y -= row_gap
+
+        y = sec_bot_y - section_gap
+
+    plt.close(fig)
     return fig
 
 

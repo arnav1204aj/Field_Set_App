@@ -934,9 +934,48 @@ st.markdown("---")
 # ─────────────────────────────
 # Tabs
 # ─────────────────────────────
-VIEW_OPTIONS = ["Analysis", "Compare", "Rankings", "Information"]
+BASE_VIEW_OPTIONS = ["Analysis", "Compare", "Rankings", "Information"]
+if current_mode == "MENS_T20":
+    VIEW_OPTIONS = ["Analysis", "IPL Batter Profiles", "Compare", "Rankings", "Information"]
+else:
+    VIEW_OPTIONS = BASE_VIEW_OPTIONS
+
 if "active_view" not in st.session_state or st.session_state["active_view"] not in VIEW_OPTIONS:
     st.session_state["active_view"] = "Analysis"
+
+# Glowing CSS for the IPL Profiles tab
+if current_mode == "MENS_T20":
+    st.markdown("""
+    <style>
+    @keyframes profileGlow {
+        0%   { box-shadow: 0 0 6px rgba(255,170,0,0.5), 0 0 12px rgba(255,170,0,0.25); }
+        50%  { box-shadow: 0 0 16px rgba(255,170,0,0.85), 0 0 32px rgba(255,170,0,0.45), 0 0 48px rgba(255,100,0,0.2); }
+        100% { box-shadow: 0 0 6px rgba(255,170,0,0.5), 0 0 12px rgba(255,170,0,0.25); }
+    }
+    /* Target the 2nd tab (0-indexed: 1) which is IPL Profiles */
+    .stTabs [data-baseweb="tab-list"] button:nth-child(2),
+    div[data-baseweb="tab-list"] > button:nth-child(2) {
+        animation: profileGlow 2.2s ease-in-out infinite;
+        background: rgba(30,20,0,0.85) !important;
+        color: #FFD700 !important;
+        font-weight: 800 !important;
+        border: 1px solid rgba(255,215,0,0.6) !important;
+    }
+    /* Also target the radio button version */
+    div[role="radiogroup"] label:nth-child(2) > div:first-child {
+        animation: profileGlow 2.2s ease-in-out infinite;
+        background: rgba(30,20,0,0.85) !important;
+        color: #FFD700 !important;
+        font-weight: 800 !important;
+        border-radius: 8px;
+        border: 1px solid rgba(255,215,0,0.5);
+    }
+    div[role="radiogroup"] label:nth-child(2) p {
+        color: #FFD700 !important;
+        font-weight: 800 !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
 active_view = st.radio(
     "View",
@@ -1922,6 +1961,105 @@ if active_view == "Rankings":
                     """,
                     unsafe_allow_html=True,
                 )
+
+# ─────────────────────────────
+# IPL Player Profiles Tab (MENS_T20 only)
+# ─────────────────────────────
+if active_view == "IPL Batter Profiles":
+    # Collapse sidebar for this tab
+    st.markdown("""
+    <style>
+    section[data-testid="stSidebar"] { display: none; }
+    @keyframes headerGlow {
+        0%   { text-shadow: 0 0 8px rgba(255,200,0,0.6); }
+        50%  { text-shadow: 0 0 24px rgba(255,200,0,0.95), 0 0 48px rgba(255,140,0,0.5); }
+        100% { text-shadow: 0 0 8px rgba(255,200,0,0.6); }
+    }
+    .ipl-profile-header {
+        text-align: center;
+        font-size: 2.4rem;
+        font-weight: 900;
+        color: #FFD700;
+        animation: headerGlow 2.5s ease-in-out infinite;
+        margin-bottom: 0.3rem;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+    }
+    .ipl-profile-sub {
+        text-align: center;
+        font-size: 1.05rem;
+        color: rgba(255,215,0,0.75);
+        margin-bottom: 1.5rem;
+    }
+    </style>
+    <p class="ipl-profile-header">IPL Batter Profiles</p>
+    <p class="ipl-profile-sub">Select a player to view their detailed batting profile card with pace &amp; spin rankings</p>
+    """, unsafe_allow_html=True)
+
+    # Load batter list from local IPL rankings CSV
+    _ipl_df = pd.read_csv("paceranks_ipl.csv")
+    _profile_batters = sorted(_ipl_df["batter"].dropna().unique().tolist())
+    if not _profile_batters:
+        st.error("No batters available.")
+    else:
+        default_profile = "Virat Kohli" if "Virat Kohli" in _profile_batters else _profile_batters[0]
+        selected_profile_player = st.selectbox(
+            "Select Player",
+            _profile_batters,
+            index=_profile_batters.index(default_profile) if default_profile in _profile_batters else 0,
+            key="profile_player_select",
+        )
+
+        if st.button("Generate Profile Card", use_container_width=True, key="gen_profile_btn"):
+            with st.spinner("Building profile card..."):
+                # Fetch player image + team from backend using raw request
+                # (make_request calls st.stop() on 404, which we don't want here)
+                img_url = None
+                team_abbr = None
+                player_in_ipl = False
+                try:
+                    _img_resp = requests.get(
+                        f"{BACKEND_URL}/player-image/{selected_profile_player}",
+                        headers=API_HEADERS,
+                        timeout=REQUEST_TIMEOUT,
+                    )
+                    if _img_resp.status_code == 200:
+                        _img_data = _img_resp.json()
+                        img_url = _img_data.get("image_url")
+                        team_abbr = _img_data.get("team")
+                        if img_url:
+                            player_in_ipl = True
+                except Exception:
+                    pass
+
+                # Load IPL-specific pace & spin rankings from local CSVs
+                _pace_df = pd.read_csv("paceranks_ipl.csv")
+                _spin_df = pd.read_csv("spinranks_ipl.csv")
+                pace_rows = _pace_df.to_dict(orient="records")
+                spin_rows = _spin_df.to_dict(orient="records")
+
+                # Check if player exists in at least one ranking list
+                in_pace = any(str(r.get("batter", "")).strip() == selected_profile_player.strip() for r in pace_rows)
+                in_spin = any(str(r.get("batter", "")).strip() == selected_profile_player.strip() for r in spin_rows)
+
+                if not player_in_ipl:
+                    st.warning(f"{selected_profile_player} is not playing in IPL 2026.")
+                elif not in_pace and not in_spin:
+                    st.warning(f"Not enough sample size available for {selected_profile_player}.")
+                else:
+                    fig = generate_player_profile_card(
+                        player_name=selected_profile_player,
+                        pace_rankings=pace_rows,
+                        spin_rankings=spin_rows,
+                        image_url=img_url,
+                        team_abbr=team_abbr,
+                    )
+
+                    if fig is None:
+                        st.warning(f"Not enough sample size available for {selected_profile_player}.")
+                    else:
+                        st.pyplot(fig, use_container_width=True)
+
 
 # Info Tab
 # ─────────────────────────────
