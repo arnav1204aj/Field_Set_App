@@ -30,7 +30,7 @@ API_HEADERS = {"X-API-Key": API_KEY}
 REQUEST_TIMEOUT = 60
 MAX_RETRIES = 4
 RETRY_STATUS_CODES = {502, 503, 504}
-username_auth = False
+username_auth = True
 
 def make_request(endpoint: str, method: str = "GET", data: Optional[Dict] = None) -> Optional[Dict]:
     """Helper function to make requests to FastAPI backend with error handling"""
