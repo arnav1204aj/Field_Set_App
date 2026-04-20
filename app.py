@@ -1035,19 +1035,6 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-if username_auth and st.session_state.get('authenticated_username'):
-    auth_info_col, auth_action_col = st.columns([5.5, 1.2])
-    with auth_info_col:
-        st.caption(f"Logged in as: {st.session_state['authenticated_username']}")
-    with auth_action_col:
-        if st.button("Switch User", use_container_width=True, key="switch_user_button"):
-            st.session_state['username_authenticated'] = False
-            st.session_state['authenticated_username'] = ""
-            st.session_state['current_mode'] = None
-            st.session_state['auth_restore_attempted'] = False
-            clear_authenticated_username()
-            st.rerun()
-
 # Mode switcher
 st.markdown("---")
 col1, col2, col3 = st.columns([1, 1, 1])
