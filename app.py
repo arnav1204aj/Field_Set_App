@@ -26,11 +26,11 @@ from html import escape
 API_KEY = st.secrets["API_KEY"]
 BACKEND_URL = st.secrets["BACKEND_URL"]
 
-
 API_HEADERS = {"X-API-Key": API_KEY}
 REQUEST_TIMEOUT = 60
 MAX_RETRIES = 4
 RETRY_STATUS_CODES = {502, 503, 504}
+username_auth = True
 
 def make_request(endpoint: str, method: str = "GET", data: Optional[Dict] = None) -> Optional[Dict]:
     """Helper function to make requests to FastAPI backend with error handling"""
@@ -297,6 +297,37 @@ def fetch_rankings(mode: str, rank_type: str, sort_by: str, version: str = "new"
     return response.get("rankings", []) if response else []
 
 
+def check_username_exists(username: str) -> bool:
+    """Validate whether a username exists in the backend user store."""
+    response = make_request(
+        "/check-username",
+        method="POST",
+        data={"username": username},
+    )
+    return bool(response and response.get("exists"))
+
+
+def _get_query_param_str(key: str) -> str:
+    """Read a query param as a normalized string."""
+    value = st.query_params.get(key, "")
+    if isinstance(value, list):
+        value = value[0] if value else ""
+    return str(value or "").strip()
+
+
+def persist_authenticated_username(username: str) -> None:
+    """Persist the authenticated username across Streamlit session resets."""
+    st.query_params["username"] = username
+
+
+def clear_authenticated_username() -> None:
+    """Clear persisted username auth state."""
+    try:
+        del st.query_params["username"]
+    except Exception:
+        st.query_params.clear()
+
+
 def _avg(values: List[float]) -> float:
     vals = [float(v) for v in values if isinstance(v, (int, float, np.floating))]
     return sum(vals) / len(vals) if vals else 0.0
@@ -550,6 +581,19 @@ def _to_bat_hand_short(batting_style: str) -> str:
 # Initialize session state
 if 'current_mode' not in st.session_state:
     st.session_state['current_mode'] = None
+if 'username_authenticated' not in st.session_state:
+    st.session_state['username_authenticated'] = not username_auth
+if 'authenticated_username' not in st.session_state:
+    st.session_state['authenticated_username'] = ""
+if 'auth_restore_attempted' not in st.session_state:
+    st.session_state['auth_restore_attempted'] = False
+
+if username_auth and not st.session_state['username_authenticated'] and not st.session_state['auth_restore_attempted']:
+    remembered_username = _get_query_param_str("username")
+    st.session_state['auth_restore_attempted'] = True
+    if remembered_username and check_username_exists(remembered_username):
+        st.session_state['username_authenticated'] = True
+        st.session_state['authenticated_username'] = remembered_username
 
 # ─────────────────────────────
 # Custom CSS
@@ -843,6 +887,77 @@ st.markdown("""
 # Mode Selection Interface
 # ─────────────────────────────
 
+if username_auth and not st.session_state['username_authenticated']:
+    st.markdown(
+        """
+        <div style="
+            background: linear-gradient(135deg, #991b1b 0%, #dc2626 100%);
+            padding: 3rem 2rem;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(220,38,38,0.4);
+            border: 1px solid rgba(255,255,255,0.1);
+            margin: 2rem 0;
+        ">
+            <h2 style="
+                font-size: 2rem;
+                font-weight: 800;
+                color: white;
+                margin-bottom: 1rem;
+            ">Enter Username</h2>
+            <p style="
+                font-size: 1.1rem;
+                color: rgba(255,255,255,0.9);
+                margin-bottom: 0;
+            ">Access the toolkit with your registered username</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    auth_left, auth_center, auth_right = st.columns([1, 1.4, 1])
+    with auth_center:
+        with st.form("username_auth_form"):
+            entered_username = st.text_input("Username", placeholder="Enter username")
+            auth_submit = st.form_submit_button("Enter", use_container_width=True)
+
+        st.markdown(
+            """
+            <p style="
+                color: rgba(255,255,255,0.82);
+                text-align: center;
+                font-size: 0.96rem;
+                line-height: 1.7;
+                margin-top: 1rem;
+            ">
+                Not Registered? Email me with your name and username at
+                <a href="mailto:arnav1204aj@gmail.com" style="color: #fca5a5; text-decoration: none; font-weight: 600;">
+                    arnav1204aj@gmail.com
+                </a>
+                or dm me on
+                <a href="https://x.com/arnav1204aj" target="_blank" style="color: #fca5a5; text-decoration: none; font-weight: 600;">
+                    X
+                </a>
+            </p>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        if auth_submit:
+            normalized_username = (entered_username or "").strip()
+            if not normalized_username:
+                st.error("Please enter a username.")
+            elif check_username_exists(normalized_username):
+                st.session_state['username_authenticated'] = True
+                st.session_state['authenticated_username'] = normalized_username
+                persist_authenticated_username(normalized_username)
+                st.rerun()
+            else:
+                clear_authenticated_username()
+                st.error("Username not found.")
+
+    st.stop()
+
 if st.session_state['current_mode'] is None:
     st.markdown("""
     <div style="
@@ -919,6 +1034,19 @@ st.markdown(f"""
     </div>
 </div>
 """, unsafe_allow_html=True)
+
+if username_auth and st.session_state.get('authenticated_username'):
+    auth_info_col, auth_action_col = st.columns([5.5, 1.2])
+    with auth_info_col:
+        st.caption(f"Logged in as: {st.session_state['authenticated_username']}")
+    with auth_action_col:
+        if st.button("Switch User", use_container_width=True, key="switch_user_button"):
+            st.session_state['username_authenticated'] = False
+            st.session_state['authenticated_username'] = ""
+            st.session_state['current_mode'] = None
+            st.session_state['auth_restore_attempted'] = False
+            clear_authenticated_username()
+            st.rerun()
 
 # Mode switcher
 st.markdown("---")
