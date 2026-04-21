@@ -382,6 +382,30 @@ def plot_field_setting(field_data):
     """
     LIMIT = 400
     THIRTY_YARD_RADIUS_M = LIMIT/2 - 15
+    batter_origin = np.array([0.0, 50.0])
+
+    def point_on_field_circle(angle_deg, radius):
+        """Project an angle ray from the batter's standing point to a field circle."""
+        ang_rad = np.deg2rad(angle_deg)
+        direction = np.array([np.sin(ang_rad), np.cos(ang_rad)], dtype=float)
+
+        origin_dot_dir = float(np.dot(batter_origin, direction))
+        origin_norm_sq = float(np.dot(batter_origin, batter_origin))
+        discriminant = origin_dot_dir ** 2 - (origin_norm_sq - radius ** 2)
+
+        if discriminant < 0:
+            return radius * direction
+
+        sqrt_discriminant = np.sqrt(discriminant)
+        t_candidates = [
+            -origin_dot_dir + sqrt_discriminant,
+            -origin_dot_dir - sqrt_discriminant,
+        ]
+        t = max((candidate for candidate in t_candidates if candidate >= 0), default=None)
+        if t is None:
+            return radius * direction
+
+        return batter_origin + t * direction
 
     # Create figure with TRANSPARENT background
     fig, ax = plt.subplots(figsize=(10, 10))
@@ -471,13 +495,11 @@ def plot_field_setting(field_data):
     wall_angle = special_fielders.get('30_yard_wall')
     
     for idx, angle in enumerate(inside_info):
-        ang_rad = np.deg2rad(angle)
         is_wall = (angle == wall_angle)
         label = f"I{idx+1}"
         infielder_labels[angle] = label
-        
-        x_pos = THIRTY_YARD_RADIUS_M * np.sin(ang_rad)
-        y_pos = THIRTY_YARD_RADIUS_M * np.cos(ang_rad)
+
+        x_pos, y_pos = point_on_field_circle(angle, THIRTY_YARD_RADIUS_M)
         
         if is_wall:
             # 30-Yard Wall - Red hexagon with glow
@@ -548,12 +570,10 @@ def plot_field_setting(field_data):
     superfielder_angle = special_fielders.get('superfielder')
 
     for idx, angle in enumerate(outside_info):
-        ang_rad = np.deg2rad(angle)
         label = f"O{idx+1}"
         outfielder_labels[angle] = label
-        
-        x_pos = LIMIT * np.sin(ang_rad)
-        y_pos = LIMIT * np.cos(ang_rad)
+
+        x_pos, y_pos = point_on_field_circle(angle, LIMIT)
         
         # Determine special fielder types with modern colors
         if angle == superfielder_angle:
