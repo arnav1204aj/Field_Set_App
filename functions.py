@@ -236,7 +236,149 @@ def plot_int_wagons(
     return fig
 
 
+def plot_matchups_chart(batter, bowl_kind, matchups_data):
+    try:
+        matchups = matchups_data.get("matchups", {})
+        if not matchups:
+            return None
 
+        if bowl_kind == 'pace bowler':
+            matchup_keys = [
+                'RIGHT_ARM_FAST', 'LEFT_ARM_FAST',
+                'RIGHT_ARM_MEDIUM_FAST', 'LEFT_ARM_MEDIUM_FAST',
+                'RIGHT_ARM_MEDIUM', 'LEFT_ARM_MEDIUM',
+            ]
+        elif bowl_kind == 'spin bowler':
+            matchup_keys = [
+                'LEG_SPIN', 'SLOW_LEFT_ARM', 'OFF_BREAK', 'CHINAMAN',
+            ]
+        else:
+            matchup_keys = list(matchups.keys())
+
+        styles, values, balls_list = [], [], []
+        for style, vals in matchups.items():
+            if style not in matchup_keys:
+                continue
+            eff = vals.get("efficiency")
+            if eff is None or not isinstance(eff, (int, float)):
+                continue
+            styles.append(style)
+            values.append((float(eff) - 1.0) * 100.0)
+            balls_list.append(int(vals.get("balls", 0)))
+
+        if not styles:
+            return None
+
+        sorted_triplets = sorted(zip(values, styles, balls_list), reverse=True)
+        values     = [t[0] for t in sorted_triplets]
+        styles     = [t[1] for t in sorted_triplets]
+        balls_list = [t[2] for t in sorted_triplets]
+
+        n = len(styles)
+        fig, ax = plt.subplots(figsize=(12, max(4.5, n * 1.15 + 2.5)))
+        fig.patch.set_alpha(0.0)
+        ax.set_facecolor("none")
+
+        y_pos   = np.arange(n)
+        max_abs = max(abs(v) for v in values) if values else 1.0
+        x_limit = max_abs * 1.45
+
+        POS_COLOR = "#22c55e"
+        NEG_COLOR = "#ef4444"
+
+        for i, (y, val, balls) in enumerate(zip(y_pos, values, balls_list)):
+            color = POS_COLOR if val >= 0 else NEG_COLOR
+
+            # ── Glow layers
+            for gw, ga in [(0.82, 0.10), (0.68, 0.15), (0.52, 0.20)]:
+                ax.barh(y, val, height=gw,
+                        color=color, edgecolor="none", alpha=ga, zorder=1)
+
+            # ── Main bar
+            ax.barh(y, val, height=0.58,
+                    color=color, edgecolor="white", linewidth=1.8,
+                    alpha=0.95, zorder=2)
+
+            # ── Value label (outside bar tip)
+            offset    = x_limit * 0.025
+            ha        = "left"  if val >= 0 else "right"
+            x_label   = val + offset if val >= 0 else val - offset
+            label_txt = f"+{val:.1f}%" if val >= 0 else f"{val:.1f}%"
+
+            ax.text(
+                x_label, y, label_txt,
+                va="center", ha=ha,
+                color="white", fontweight="bold", fontsize=10.5,
+                bbox=dict(facecolor="#111827", alpha=0.92,
+                          edgecolor=color, linewidth=1.8,
+                          boxstyle="round,pad=0.38"),
+                family="monospace", zorder=4
+            )
+
+           
+
+        # ── Zero line
+        ax.axvline(0, color="white", linewidth=2.4, alpha=0.80, zorder=5)
+
+        # ── Favourable / Unfavourable — anchored to axes top, never overlap data
+        ax.text(
+            0.98, 1.015,
+            "FAVOURABLE  ▶",
+            transform=ax.transAxes,
+            ha="right", va="bottom",
+            color=POS_COLOR, fontsize=9, fontweight="bold",
+            family="monospace", alpha=0.90
+        )
+        ax.text(
+            0.02, 1.015,
+            "◀  UNFAVOURABLE",
+            transform=ax.transAxes,
+            ha="left", va="bottom",
+            color=NEG_COLOR, fontsize=9, fontweight="bold",
+            family="monospace", alpha=0.90
+        )
+
+        # ── Y-axis: style name + sample size on second line
+        y_labels = [
+            f"{s}\n({b} balls)"
+            for s, b in zip(styles, balls_list)
+        ]
+        ax.set_yticks(y_pos)
+        ax.set_yticklabels(
+            y_labels,
+            color="white", fontsize=10, fontweight="bold",
+            family="sans-serif"
+        )
+
+        # ── X-axis
+        ax.set_xlabel(
+            "(%, 0 = baseline performance)",
+            color="white", fontsize=12, fontweight="bold"
+        )
+        ax.set_title(
+            f"Bowl-Style Matchup Efficiency — {batter}",
+            color="white", fontsize=14, fontweight="bold",
+            pad=28, family="sans-serif"
+        )
+
+        # ── Grid
+        ax.grid(axis="x", color="white", alpha=0.10,
+                linestyle="--", linewidth=1)
+        ax.set_axisbelow(True)
+
+        # ── Spines
+        for spine in ax.spines.values():
+            spine.set_visible(False)
+        ax.tick_params(colors="white", labelsize=10, width=0)
+
+        ax.set_xlim(-x_limit, x_limit)
+        ax.invert_yaxis()
+
+        plt.tight_layout()
+        return fig
+
+    except Exception:
+        return None
 
 
 def plot_intent_impact(

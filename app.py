@@ -3,7 +3,7 @@ st.set_page_config(layout="wide", page_title="Optimal Field Setting | Cricket An
 
 import pandas as pd
 import numpy as np
-from functions import plot_int_wagons, plot_intent_impact, plot_field_setting, plot_intrel_pitch, plot_intrel_pitch_avg, plot_intrel_pitch_batter, plot_sector_ev_heatmap, create_shot_profile_chart, create_similarity_chart, create_zone_strength_table, get_top_similar_batters, generate_player_profile_card
+from functions import plot_int_wagons, plot_intent_impact, plot_field_setting, plot_intrel_pitch, plot_intrel_pitch_avg, plot_intrel_pitch_batter, plot_sector_ev_heatmap, create_shot_profile_chart, create_similarity_chart, create_zone_strength_table, get_top_similar_batters, generate_player_profile_card, plot_matchups_chart
 
 
 
@@ -94,6 +94,7 @@ ANALYSIS_SECTIONS = [
     "Relative Zone Strengths",
     "Relative Shot Strengths",
     "Intent Impact Progression",
+    "Matchups",
 ]
 
 COMPARE_SECTIONS = [
@@ -144,6 +145,12 @@ def fetch_outfielders(mode: str, batter: str, bowl_kind: str, lengths: List[str]
         data={"lengths": lengths}
     )
     return response['outfielders'] if response else []
+
+@st.cache_data(ttl=600, max_entries=50)
+def fetch_matchups(mode: str, batter: str) -> Optional[Dict]:
+    """Fetch bowl-style matchup efficiency data from backend (MENS_T20 only)."""
+    response = make_request(f"/matchups/{mode}/{batter}")
+    return response if response else None
 
 @st.cache_data(ttl=600, max_entries=50)
 def fetch_field_setup(mode: str, batter: str, bowl_kind: str, lengths: List[str], outfielders: str) -> Optional[Dict]:
@@ -1629,7 +1636,79 @@ if active_view == "Analysis":
                     </p>
                 </div>
                 """, unsafe_allow_html=True)
+        
+    if submit and "Matchups" in selected_sections:
+        st.markdown('---')
+        st.markdown('<p class="section-header">Matchups</p>', unsafe_allow_html=True)
 
+        if current_mode in ("WOMENS_T20", "MENS_ODI"):
+            st.markdown(
+                """
+                <div style="
+                    background: linear-gradient(135deg, rgba(153,27,27,0.2) 0%, rgba(220,38,38,0.2) 100%);
+                    padding: 2rem 1.5rem;
+                    border-radius: 12px;
+                    border: 1px solid rgba(220,38,38,0.3);
+                    text-align: center;
+                ">
+                    <p style="color: #fca5a5; font-size: 1.25rem; font-weight: 700; margin: 0;">
+                          Matchups — Coming Soon
+                    </p>
+                    <p style="color: rgba(255,255,255,0.7); font-size: 0.98rem; margin-top: 0.6rem; margin-bottom: 0;">
+                        Bowl-style matchup analysis is currently available for Men's T20 only.
+                        Women's T20 and Men's ODI support is on the way.
+                    </p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        else:
+            col1, col2 = st.columns([1.8, 1.2])
+            with col1:
+                try:
+                    matchups_data = fetch_matchups(current_mode, selected_batter)
+                    if not matchups_data or not matchups_data.get("matchups"):
+                        st.warning("No matchup data available for this batter.")
+                    else:
+                        fig = plot_matchups_chart(selected_batter, selected_bowl_kind, matchups_data)
+                        if fig:
+                            st.pyplot(fig, use_container_width=True)
+                        else:
+                            st.warning("Could not render matchup chart.")
+                except Exception:
+                    st.warning("Matchup data unavailable.")
+
+            with col2:
+                st.markdown(
+                    """
+                    <div style="
+                        background: linear-gradient(135deg, rgba(153,27,27,0.2) 0%, rgba(220,38,38,0.2) 100%);
+                        padding: 1.5rem;
+                        border-radius: 12px;
+                        border: 1px solid rgba(220,38,38,0.3);
+                        height: 100%;
+                    ">
+                        <h3 style="color: #fca5a5; font-size: 1.2rem; font-weight: 700; margin-top: 0;">
+                            Understanding Matchup Efficiency
+                        </h3>
+                        <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem;">
+                            Each bar shows how the batter performs against a bowling style
+                            <strong>relative to their baseline performance</strong>.
+                        </p>
+                        <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem;">
+                            <strong style="color: #22c55e;">Green (positive)</strong> — batter outperforms baseline vs this style.<br/>
+                            <strong style="color: #ef4444;">Red (negative)</strong> — batter underperforms baseline vs this style.
+                        </p>
+                        <p style="color: rgba(255,255,255,0.75); font-size: 0.9rem; font-style: italic; margin-bottom: 0;">
+                            Sample size (balls faced) is shown next to each bar.
+                            Styles with very low sample sizes should be interpreted with caution.
+                            Values are weighted to give roughly 50% weight to recent 2 years of data.
+                        </p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
     if not submit:
         st.info("Please select parameters and click **Generate Results**")
 # Compare Tab
