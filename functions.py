@@ -236,7 +236,7 @@ def plot_int_wagons(
     return fig
 
 
-def plot_matchups_chart(batter, bowl_kind, matchups_data):
+def plot_matchups_chart(batter, bowl_kind, matchups_data, kind):
     try:
         matchups = matchups_data.get("matchups", {})
         if not matchups:
@@ -259,7 +259,7 @@ def plot_matchups_chart(batter, bowl_kind, matchups_data):
         for style, vals in matchups.items():
             if style not in matchup_keys:
                 continue
-            eff = vals.get("efficiency")
+            eff = vals.get(kind)
             if eff is None or not isinstance(eff, (int, float)):
                 continue
             styles.append(style)
@@ -355,8 +355,14 @@ def plot_matchups_chart(batter, bowl_kind, matchups_data):
             "(%, 0 = baseline performance)",
             color="white", fontsize=12, fontweight="bold"
         )
+        if kind == 'sr_efficiency':
+            title = 'Strike Efficiency'
+        elif kind == 'ctrl_efficiency':
+            title = 'Control Efficiency' 
+        else:
+            title = 'Overall Efficiency'       
         ax.set_title(
-            f"Bowl-Style Matchup Efficiency — {batter}",
+            f"Bowl-Style Matchup {title} — {batter}",
             color="white", fontsize=14, fontweight="bold",
             pad=28, family="sans-serif"
         )

@@ -26,6 +26,7 @@ from html import escape
 API_KEY = st.secrets["API_KEY"]
 BACKEND_URL = st.secrets["BACKEND_URL"]
 
+
 API_HEADERS = {"X-API-Key": API_KEY}
 REQUEST_TIMEOUT = 60
 MAX_RETRIES = 4
@@ -1664,6 +1665,34 @@ if active_view == "Analysis":
             )
 
         else:
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                try:
+                    matchups_data = fetch_matchups(current_mode, selected_batter)
+                    if not matchups_data or not matchups_data.get("matchups"):
+                        st.warning("No matchup data available for this batter.")
+                    else:
+                        fig = plot_matchups_chart(selected_batter, selected_bowl_kind, matchups_data, 'sr_efficiency')
+                        if fig:
+                            st.pyplot(fig, use_container_width=True)
+                        else:
+                            st.warning("Could not render matchup chart.")
+                except Exception:
+                    st.warning("Matchup data unavailable.")
+            with col2:
+                try:
+                    matchups_data = fetch_matchups(current_mode, selected_batter)
+                    if not matchups_data or not matchups_data.get("matchups"):
+                        st.warning("No matchup data available for this batter.")
+                    else:
+                        fig = plot_matchups_chart(selected_batter, selected_bowl_kind, matchups_data, 'ctrl_efficiency')
+                        if fig:
+                            st.pyplot(fig, use_container_width=True)
+                        else:
+                            st.warning("Could not render matchup chart.")
+                except Exception:
+                    st.warning("Matchup data unavailable.")
+
             col1, col2 = st.columns([1.8, 1.2])
             with col1:
                 try:
@@ -1671,7 +1700,7 @@ if active_view == "Analysis":
                     if not matchups_data or not matchups_data.get("matchups"):
                         st.warning("No matchup data available for this batter.")
                     else:
-                        fig = plot_matchups_chart(selected_batter, selected_bowl_kind, matchups_data)
+                        fig = plot_matchups_chart(selected_batter, selected_bowl_kind, matchups_data, 'efficiency')
                         if fig:
                             st.pyplot(fig, use_container_width=True)
                         else:
