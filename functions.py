@@ -250,7 +250,7 @@ def plot_matchups_chart(batter, bowl_kind, matchups_data):
             ]
         elif bowl_kind == 'spin bowler':
             matchup_keys = [
-                'LEG_SPIN', 'SLOW_LEFT_ARM', 'OFF_BREAK', 'CHINAMAN',
+                'LEG_BREAK', 'SLOW_LEFT_ARM', 'OFF_BREAK', 'CHINAMAN',
             ]
         else:
             matchup_keys = list(matchups.keys())
