@@ -86,6 +86,15 @@ MODES = {
     'MENS_ODI': 'Men\'s ODI'
 }
 
+# ─────────────────────────────
+# Trial Mode Player Lists
+# ─────────────────────────────
+TRIAL_PLAYERS = {
+    "MENS_T20": ["Virat Kohli", "Rohit Sharma", "Jos Buttler", "Suryakumar Yadav", "Babar Azam"],
+    "MENS_ODI": ["Virat Kohli", "Joe Root", "Babar Azam", "Rohit Sharma", "David Warner"],
+    "WOMENS_T20": ["Smriti Mandhana", "Meg Lanning", "Beth Mooney", "Nat Sciver-Brunt", "Shafali Verma"],
+}
+
 ANALYSIS_SECTIONS = [
     "Field Overview",
     "Sector Importance Analysis",
@@ -595,12 +604,16 @@ if 'authenticated_username' not in st.session_state:
     st.session_state['authenticated_username'] = ""
 if 'auth_restore_attempted' not in st.session_state:
     st.session_state['auth_restore_attempted'] = False
+# ── NEW: trial mode flag ──────────────────────────────────────────────────────
+if 'trial_mode' not in st.session_state:
+    st.session_state['trial_mode'] = False
 
 if username_auth and not st.session_state['username_authenticated'] and not st.session_state['auth_restore_attempted']:
     remembered_username = _get_query_param_str("username")
     st.session_state['auth_restore_attempted'] = True
     if remembered_username and check_username_exists(remembered_username):
         st.session_state['username_authenticated'] = True
+        st.session_state['trial_mode'] = False
         st.session_state['authenticated_username'] = remembered_username
 
 # ─────────────────────────────
@@ -892,10 +905,10 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ─────────────────────────────
-# Mode Selection Interface
+# Auth Wall (with Trial Mode option)
 # ─────────────────────────────
 
-if username_auth and not st.session_state['username_authenticated']:
+if username_auth and not st.session_state['username_authenticated'] and not st.session_state['trial_mode']:
     st.markdown(
         """
         <div style="
@@ -917,7 +930,7 @@ if username_auth and not st.session_state['username_authenticated']:
                 font-size: 1.1rem;
                 color: rgba(255,255,255,0.9);
                 margin-bottom: 0;
-            ">Access the toolkit with your registered username</p>
+            ">Access the toolkit with your registered username, or try a free trial with 5 players per mode.</p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -928,6 +941,10 @@ if username_auth and not st.session_state['username_authenticated']:
         with st.form("username_auth_form"):
             entered_username = st.text_input("Username", placeholder="Enter username")
             auth_submit = st.form_submit_button("Enter", use_container_width=True)
+
+        if st.button("🎯 Try Free Trial (5 players per mode)", use_container_width=True, key="trial_btn"):
+            st.session_state['trial_mode'] = True
+            st.rerun()
 
         st.markdown(
             """
@@ -957,6 +974,7 @@ if username_auth and not st.session_state['username_authenticated']:
                 st.error("Please enter a username.")
             elif check_username_exists(normalized_username):
                 st.session_state['username_authenticated'] = True
+                st.session_state['trial_mode'] = False
                 st.session_state['authenticated_username'] = normalized_username
                 persist_authenticated_username(normalized_username)
                 st.rerun()
@@ -965,6 +983,10 @@ if username_auth and not st.session_state['username_authenticated']:
                 st.error("Username not found.")
 
     st.stop()
+
+# ─────────────────────────────
+# Mode Selection Interface
+# ─────────────────────────────
 
 if st.session_state['current_mode'] is None:
     st.markdown("""
@@ -1016,6 +1038,9 @@ if st.session_state['current_mode'] is None:
 
 current_mode = st.session_state['current_mode']
 
+# Convenience flag used throughout the Analysis tab
+is_trial = st.session_state.get('trial_mode', False) and not st.session_state.get('username_authenticated', False)
+
 # Header
 mode_title = MODES.get(current_mode, 'Optimal Field Setting')
 
@@ -1042,6 +1067,38 @@ st.markdown(f"""
     </div>
 </div>
 """, unsafe_allow_html=True)
+
+# ── Trial mode banner ─────────────────────────────────────────────────────────
+if is_trial:
+    banner_col, btn_col = st.columns([5, 1])
+    with banner_col:
+        st.markdown(
+            """
+            <div style="
+                background: linear-gradient(90deg, rgba(251,191,36,0.18) 0%, rgba(245,158,11,0.10) 100%);
+                border: 1px solid rgba(251,191,36,0.55);
+                border-radius: 10px;
+                padding: 0.65rem 1.1rem;
+                margin-bottom: 0.5rem;
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+            ">
+                <span style="font-size: 1.2rem;">⚠️</span>
+                <span style="color: #fde68a; font-size: 0.97rem; font-weight: 600;">
+                    You are in <strong>Trial Mode</strong> — Analysis is limited to 5 players per format.
+                    All other sections (Compare, Rankings, Information, IPL Profiles) are fully accessible.
+                </span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with btn_col:
+        if st.button("Register / Login →", use_container_width=True, key="trial_goto_login"):
+            st.session_state['trial_mode'] = False
+            st.session_state['username_authenticated'] = False
+            st.session_state['current_mode'] = None
+            st.rerun()
 
 # Mode switcher
 st.markdown("---")
@@ -1136,6 +1193,16 @@ if active_view == "Analysis":
             if not batter_list:
                 st.error('No batters available for selected mode.')
                 st.stop()
+
+            # ── Restrict to trial players when in trial mode ──────────────────
+            if is_trial:
+                trial_players = TRIAL_PLAYERS.get(current_mode, [])
+                batter_list = [b for b in batter_list if b in trial_players] or trial_players
+                st.markdown(
+                    '<p style="color: #fbbf24; font-size: 0.82rem; margin-bottom: 0.5rem;">'
+                    '⚠️ Trial: 5 players available. Register for full access.</p>',
+                    unsafe_allow_html=True,
+                )
 
             default_batter = "Smriti Mandhana" if current_mode == 'WOMENS_T20' else "Virat Kohli"
             default_index = batter_list.index(default_batter) if default_batter in batter_list else 0
@@ -2307,13 +2374,13 @@ if active_view == "Information":
         Each fielder protects runs in their coverage area. <strong style="color: #26F7FD;">Protection stats show the percentage of runs saved
         by the optimal field (Running for running class runs, Boundary for boundary class runs, less protection is better for the batter).</strong> Infielders protect running runs,
         while outfielders protect boundary runs.</p><h3 class="info-subtitle">Special Fielder Categories</h3><div class="special-category">
-            <strong style="color: #dc2626;">30 Yard Wall</strong> â€” Your best infielder, placed where most grounded shots are expected.
+            <strong style="color: #dc2626;">30 Yard Wall</strong> â€" Your best infielder, placed where most grounded shots are expected.
         </div><div class="special-category">
-            <strong style="color: #f97316;">Sprinter</strong> â€” The best runner, placed where batters tend to hit and run singles/doubles in the outfield.
+            <strong style="color: #f97316;">Sprinter</strong> â€" The best runner, placed where batters tend to hit and run singles/doubles in the outfield.
         </div><div class="special-category">
-            <strong style="color: #84cc16;">Catcher</strong> â€” The best catcher, placed where batters hit the most boundaries.
+            <strong style="color: #84cc16;">Catcher</strong> â€" The best catcher, placed where batters hit the most boundaries.
         </div><div class="special-category">
-            <strong style="color: #fbbf24;">Superfielder</strong> â€” A combination of sprinter and catcher, used if both positions coincide.
+            <strong style="color: #fbbf24;">Superfielder</strong> â€" A combination of sprinter and catcher, used if both positions coincide.
         </div><h3 class="info-subtitle">Further Reading</h3>
         <p style="color: rgba(255,255,255,0.85); line-height: 1.8; font-size: 1rem;">
         For a detailed explanation of the methodology, read the full article on Substack: 
