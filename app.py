@@ -324,6 +324,35 @@ def check_username_exists(username: str) -> bool:
     return bool(response and response.get("exists"))
 
 
+def start_session(username: str) -> str:
+    """Start a session for the given username; returns the session token or empty string on failure."""
+    response = make_request(
+        "/session/start",
+        method="POST",
+        data={"username": username},
+    )
+    return response.get("token", "") if response else ""
+
+
+def end_session(username: str) -> None:
+    """End the active session for the given username."""
+    make_request(
+        "/session/end",
+        method="POST",
+        data={"username": username},
+    )
+
+
+def heartbeat_session(username: str, token: str) -> bool:
+    """Return True if the session token is still valid for this username."""
+    response = make_request(
+        "/session/heartbeat",
+        method="POST",
+        data={"username": username, "token": token},
+    )
+    return bool(response and response.get("valid"))
+
+
 def _get_query_param_str(key: str) -> str:
     """Read a query param as a normalized string."""
     value = st.query_params.get(key, "")
@@ -607,14 +636,19 @@ if 'auth_restore_attempted' not in st.session_state:
 # ── NEW: trial mode flag ──────────────────────────────────────────────────────
 if 'trial_mode' not in st.session_state:
     st.session_state['trial_mode'] = False
+if 'session_token' not in st.session_state:
+    st.session_state['session_token'] = ""
 
 if username_auth and not st.session_state['username_authenticated'] and not st.session_state['auth_restore_attempted']:
     remembered_username = _get_query_param_str("username")
     st.session_state['auth_restore_attempted'] = True
     if remembered_username and check_username_exists(remembered_username):
-        st.session_state['username_authenticated'] = True
-        st.session_state['trial_mode'] = False
-        st.session_state['authenticated_username'] = remembered_username
+        token = start_session(remembered_username)
+        if token:
+            st.session_state['username_authenticated'] = True
+            st.session_state['trial_mode'] = False
+            st.session_state['authenticated_username'] = remembered_username
+            st.session_state['session_token'] = token
 
 # ─────────────────────────────
 # Custom CSS
@@ -973,11 +1007,16 @@ if username_auth and not st.session_state['username_authenticated'] and not st.s
             if not normalized_username:
                 st.error("Please enter a username.")
             elif check_username_exists(normalized_username):
-                st.session_state['username_authenticated'] = True
-                st.session_state['trial_mode'] = False
-                st.session_state['authenticated_username'] = normalized_username
-                persist_authenticated_username(normalized_username)
-                st.rerun()
+                token = start_session(normalized_username)
+                if not token:
+                    st.error("Could not establish session. Please try again.")
+                else:
+                    st.session_state['username_authenticated'] = True
+                    st.session_state['trial_mode'] = False
+                    st.session_state['authenticated_username'] = normalized_username
+                    st.session_state['session_token'] = token
+                    persist_authenticated_username(normalized_username)
+                    st.rerun()
             else:
                 clear_authenticated_username()
                 st.error("Username not found.")
@@ -1041,6 +1080,26 @@ current_mode = st.session_state['current_mode']
 # Convenience flag used throughout the Analysis tab
 is_trial = st.session_state.get('trial_mode', False) and not st.session_state.get('username_authenticated', False)
 
+# ── Session validity heartbeat (fires on every rerender) ─────────────────────
+if (
+    st.session_state.get('username_authenticated')
+    and not st.session_state.get('trial_mode')
+    and st.session_state.get('authenticated_username')
+    and st.session_state.get('session_token')
+):
+    _still_valid = heartbeat_session(
+        st.session_state['authenticated_username'],
+        st.session_state['session_token'],
+    )
+    if not _still_valid:
+        st.session_state['username_authenticated'] = False
+        st.session_state['session_token'] = ""
+        st.session_state['authenticated_username'] = ""
+        st.session_state['current_mode'] = None
+        clear_authenticated_username()
+        st.warning("⚠️ Your session was ended because the same account logged in elsewhere.")
+        st.stop()
+
 # Header
 mode_title = MODES.get(current_mode, 'Optimal Field Setting')
 
@@ -1095,8 +1154,11 @@ if is_trial:
         )
     with btn_col:
         if st.button("Register / Login →", use_container_width=True, key="trial_goto_login"):
+            if st.session_state.get('authenticated_username'):
+                end_session(st.session_state['authenticated_username'])
             st.session_state['trial_mode'] = False
             st.session_state['username_authenticated'] = False
+            st.session_state['session_token'] = ""
             st.session_state['current_mode'] = None
             st.rerun()
 
