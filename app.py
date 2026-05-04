@@ -1741,9 +1741,9 @@ if active_view == "Analysis":
             impact_data = impact_data_cached
             impact_payload = impact_data.get('intent_impact_selected', {}) if impact_data else {}
             with c1:
-                st.pyplot(plot_intent_impact(selected_batter, impact_payload, 'all bowlers', min_count=5), use_container_width=True)
+                st.pyplot(plot_intent_impact(selected_batter, impact_payload, 'all bowlers', min_count=2.5), use_container_width=True)
             with c2:
-                st.pyplot(plot_intent_impact(selected_batter, impact_payload, selected_bowl_kind, min_count=5), use_container_width=True)
+                st.pyplot(plot_intent_impact(selected_batter, impact_payload, selected_bowl_kind, min_count=2.5), use_container_width=True)
         except Exception:
             st.warning('Intent Impact Analysis Unavailable')
         st.markdown("""
