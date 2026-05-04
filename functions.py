@@ -1309,7 +1309,16 @@ def create_zone_strength_table(dict_360, batter_name, selected_lengths, bowl_kin
         )
         ax.set_xlim(0, 100)
         ax.set_xlabel('Percentage (%)', fontsize=20, fontweight='bold', color='white')
-        
+        ax.set_title(
+            f'Zone Strength Distribution\n'
+            f"{', '.join(map(str, selected_lengths))} • {bowl_kind}",
+            color='white',
+            fontsize=14,
+            fontweight='bold',
+            pad=60,
+            family='sans-serif'
+        )
+
         # Grid
         ax.grid(axis='x', color='white', alpha=0.2, linestyle='--', linewidth=0.8)
         ax.set_axisbelow(True)

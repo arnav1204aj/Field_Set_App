@@ -1362,7 +1362,7 @@ if active_view == "Analysis":
                 st.warning("No field setting found for this combination.")
             else:
                 data = field_setup
-                st.markdown(f'<p class="context-info" style="color: rgba(255,255,255,0.7); font-size:1.1rem; font-weight:500;">{selected_bowl_kind} | {", ".join(selected_lengths)} | {selected_outfielders} outfielders</p>', unsafe_allow_html=True)
+                st.markdown(f'<p class="context-info" style="color: rgba(255,255,255,0.7); font-size:1.1rem; font-weight:500;">{selected_bowl_kind} | {", ".join(selected_lengths)}</p>', unsafe_allow_html=True)
 
                 if zone_data_cached is None:
                     zone_data_cached = fetch_zone_strength(current_mode, selected_batter, selected_bowl_kind, selected_lengths)
