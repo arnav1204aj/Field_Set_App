@@ -1987,7 +1987,6 @@ if active_view == "Analysis":
                                 <strong style="color: #ef4444;">Red (negative)</strong> — batter underperforms baseline vs this variation.
                             </p>
                             <p style="color: rgba(255,255,255,0.75); font-size: 0.9rem; font-style: italic; margin-bottom: 0;">
-                                A no movement ball from a pacer is not considered as variation. It is included though in baseline calculations.
                                 Styles with very low sample sizes should be interpreted with caution.
                                 Values are weighted to give roughly 50% weight to recent 2 years of data.
                             </p>

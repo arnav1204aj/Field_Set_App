@@ -395,19 +395,14 @@ def plot_variations_chart(batter, bowl_kind, variations_data, kind):
 
         if bowl_kind == 'pace bowler':
             prefix = 'Pace_'
-            exclude = {'Pace_NoMovement'}
         elif bowl_kind == 'spin bowler':
             prefix = 'Spin_'
-            exclude = {'Spin_StockBall'}
         else:
             prefix = None
-            exclude = set()
 
         names, values, balls_list = [], [], []
         for var_name, vals in variations.items():
             if prefix and not var_name.startswith(prefix):
-                continue
-            if var_name in exclude:
                 continue
             balls = int(vals.get('balls', 0))
             if balls < 10:
@@ -416,6 +411,8 @@ def plot_variations_chart(batter, bowl_kind, variations_data, kind):
             if eff is None or not isinstance(eff, (int, float)):
                 continue
             display_name = var_name[len(prefix):] if prefix else var_name
+            if display_name == 'StockBall':
+                display_name = 'StockBall (SLA)'
             names.append(display_name)
             values.append((float(eff) - 1.0) * 100.0)
             balls_list.append(balls)
