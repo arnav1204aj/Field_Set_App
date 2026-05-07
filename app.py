@@ -1987,6 +1987,8 @@ if active_view == "Analysis":
                                 <strong style="color: #ef4444;">Red (negative)</strong> — batter underperforms baseline vs this variation.
                             </p>
                             <p style="color: rgba(255,255,255,0.75); font-size: 0.9rem; font-style: italic; margin-bottom: 0;">
+                                Sample size (balls faced) is shown next to each bar.
+                                Styles with very low sample sizes should be interpreted with caution.
                                 Values are weighted to give roughly 50% weight to recent 2 years of data.
                             </p>
                         </div>
