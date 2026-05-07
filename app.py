@@ -1987,8 +1987,6 @@ if active_view == "Analysis":
                                 <strong style="color: #ef4444;">Red (negative)</strong> — batter underperforms baseline vs this variation.
                             </p>
                             <p style="color: rgba(255,255,255,0.75); font-size: 0.9rem; font-style: italic; margin-bottom: 0;">
-                                Only variations with 10+ balls are shown.
-                                Pace mode excludes No Movement; Spin mode excludes Stock Ball.
                                 Values are weighted to give roughly 50% weight to recent 2 years of data.
                             </p>
                         </div>
