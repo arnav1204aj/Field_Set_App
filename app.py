@@ -1394,19 +1394,23 @@ if active_view == "Analysis":
                                 v = dict_360.get(ln, {}).get(run_class, {}).get('360_score', 0)
                             else:
                                 v = avg_360.get(ln, {}).get(run_class, {}).get('360_score', 0)
+                            v = float(v or 0)
                         except Exception:
-                            v = 0
+                            v = 0.0
                         vals.append(v)
-                    return sum(vals) / len(sel_lens) if sel_lens else 0
+                    return sum(vals) / len(sel_lens) if sel_lens else 0.0
 
                 for run_class, label in [("running", "RUNNING"), ("boundary", "BOUNDARY"), ("overall", "OVERALL")]:
-                    batter_score = avg_score('batter', run_class)
-                    global_score = avg_score('global', run_class)
-                    c1, c2 = st.columns(2)
-                    with c1:
-                        st.metric(f"BATTER 360 SCORE ({label})", f"{batter_score:.1f}", delta=f"{batter_score - global_score:.1f}")
-                    with c2:
-                        st.metric(f"GLOBAL AVG ({label} 360)", f"{global_score:.1f}")
+                    try:
+                        batter_score = avg_score('batter', run_class)
+                        global_score = avg_score('global', run_class)
+                        c1, c2 = st.columns(2)
+                        with c1:
+                            st.metric(f"BATTER 360 SCORE ({label})", f"{batter_score:.1f}", delta=f"{batter_score - global_score:.1f}")
+                        with c2:
+                            st.metric(f"GLOBAL AVG ({label} 360)", f"{global_score:.1f}")
+                    except Exception:
+                        pass
 
                 st.markdown('---')
                 c1, c2 = st.columns([1.6, 1.4])
