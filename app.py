@@ -3,7 +3,7 @@ st.set_page_config(layout="wide", page_title="Optimal Field Setting | Cricket An
 
 import pandas as pd
 import numpy as np
-from functions import plot_int_wagons, plot_intent_impact, plot_field_setting, plot_intrel_pitch, plot_intrel_pitch_avg, plot_intrel_pitch_batter, plot_sector_ev_heatmap, create_shot_profile_chart, create_similarity_chart, create_zone_strength_table, get_top_similar_batters, generate_player_profile_card, plot_matchups_chart, plot_variations_chart
+from functions import plot_int_wagons, plot_intent_impact, plot_field_setting, plot_intrel_pitch, plot_intrel_pitch_avg, plot_intrel_pitch_batter, plot_sector_ev_heatmap, create_shot_profile_chart, create_similarity_chart, compute_feature_group_breakdown, create_zone_strength_table, get_top_similar_batters, generate_player_profile_card, plot_matchups_chart, plot_variations_chart
 
 
 
@@ -25,7 +25,6 @@ from html import escape
 # # ─────────────────────────────
 API_KEY = st.secrets["API_KEY"]
 BACKEND_URL = st.secrets["BACKEND_URL"]
-
 
 API_HEADERS = {"X-API-Key": API_KEY}
 REQUEST_TIMEOUT = 60
@@ -254,6 +253,16 @@ def fetch_similar_batters(mode: str, batter: str, bowl_kind: str, lengths: List[
             "lengths": lengths,
             "top_n": 5
         }
+    )
+    return response if response else None
+
+@st.cache_data(ttl=600, max_entries=50)
+def fetch_feat_data(mode: str, batter: str, bowl_kind: str, lengths: List[str]) -> Optional[Dict]:
+    """Fetch full feature matrix (all batters) for the given bowl_kind + lengths."""
+    response = make_request(
+        "/feat-data",
+        method="POST",
+        data={"mode": mode, "batter": batter, "bowl_kind": bowl_kind, "lengths": lengths, "top_n": 5}
     )
     return response if response else None
 
@@ -1587,6 +1596,7 @@ if active_view == "Analysis":
         st.markdown('<p class="section-header">Similar Batters</p>', unsafe_allow_html=True)
         col1, col2 = st.columns([2, 1])
         with col1:
+            sim_data = None
             try:
                 sim_data = fetch_similar_batters(current_mode, selected_batter, selected_bowl_kind, selected_lengths)
                 if sim_data and sim_data.get('similarity_data'):
@@ -1609,11 +1619,79 @@ if active_view == "Analysis":
                         Understanding Batter Similarity
                     </h3>
                     <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem;">
-                        Batter Similarity a vector based similarity score considering shots, 
-                        zones, control%, boundary%, dot%, running%, average on different lines, lengths and bowler kinds.
+                        Batter Similarity a vector based similarity score considering shots,
+                        zones, strike rate and control on different lines, lengths and bowler kinds.
                     </p>
                 </div>
                 """, unsafe_allow_html=True)
+
+        if current_mode == "MENS_T20":
+            try:
+                feat_resp = fetch_feat_data(current_mode, selected_batter, selected_bowl_kind, selected_lengths)
+                feat_data = feat_resp.get('feat_data', {}) if feat_resp else {}
+                bd_data = compute_feature_group_breakdown(feat_data, selected_batter, top_n=5)
+                if bd_data:
+                    groups = list(bd_data.keys())
+                    max_rows = max((len(bd_data[g]) for g in groups), default=0)
+
+                    # Header row
+                    header_cells = "".join(
+                        f'<th style="padding:10px 16px;text-align:left;color:rgba(252,165,165,0.65);'
+                        f'font-size:0.78rem;font-weight:600;letter-spacing:0.06em;'
+                        f'text-transform:uppercase;border-bottom:1px solid rgba(220,38,38,0.2);">'
+                        f'{g}</th>'
+                        for g in groups
+                    )
+                    header = (
+                        f'<tr><th style="padding:10px 16px;color:rgba(255,255,255,0.2);'
+                        f'font-size:0.75rem;font-weight:600;border-bottom:1px solid rgba(220,38,38,0.2);">'
+                        f'#</th>{header_cells}</tr>'
+                    )
+
+                    # Data rows
+                    body_rows = ""
+                    for i in range(max_rows):
+                        row_bg = "rgba(220,38,38,0.04)" if i % 2 == 0 else "transparent"
+                        rank_cell = (
+                            f'<td style="padding:9px 16px;color:rgba(255,255,255,0.22);'
+                            f'font-weight:600;font-size:0.8rem;">{i+1}</td>'
+                        )
+                        data_cells = ""
+                        for g in groups:
+                            rows = bd_data[g]
+                            if i < len(rows):
+                                name = rows[i]['batter']
+                                score = rows[i]['similarity']
+                                score_opacity = round(0.55 + 0.35 * (max_rows - i) / max_rows, 2)
+                                cell = (
+                                    f'<td style="padding:9px 16px;border-left:1px solid rgba(220,38,38,0.12);">'
+                                    f'<span style="color:rgba(255,255,255,0.85);font-weight:500;font-size:0.88rem;">{name}</span>'
+                                    f'<span style="color:rgba(252,165,165,{score_opacity});font-size:0.75rem;margin-left:8px;font-weight:600;">{score:.3f}</span>'
+                                    f'</td>'
+                                )
+                            else:
+                                cell = '<td style="padding:9px 16px;border-left:1px solid rgba(220,38,38,0.12);"></td>'
+                            data_cells += cell
+                        body_rows += (
+                            f'<tr style="background:{row_bg};">'
+                            f'{rank_cell}{data_cells}</tr>'
+                        )
+
+                    if max_rows > 0:
+                        st.markdown('<p class="section-header">Feature Group Breakdown</p>', unsafe_allow_html=True)
+                        html = f"""
+                        <div style="overflow-x:auto;border-radius:8px;
+                                    border:1px solid rgba(220,38,38,0.15);
+                                    background:rgba(15,0,0,0.35);padding-bottom:0;">
+                            <table style="width:100%;border-collapse:collapse;font-family:sans-serif;margin:0;padding:0;">
+                                <thead>{header}</thead>
+                                <tbody>{body_rows}</tbody>
+                            </table>
+                        </div>
+                        """
+                        st.markdown(html, unsafe_allow_html=True)
+            except Exception:
+                pass
 
     if submit and "Intent, Reliability, Int-Rel by length" in selected_sections:
         st.markdown('---')

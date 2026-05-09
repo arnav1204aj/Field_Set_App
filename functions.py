@@ -11,6 +11,8 @@ import pandas as pd
 import os
 import io
 import requests as _req
+from sklearn.preprocessing import StandardScaler, normalize
+from sklearn.metrics.pairwise import cosine_similarity
 
 from matplotlib.colors import Normalize
 from matplotlib.cm import ScalarMappable
@@ -1820,6 +1822,133 @@ def create_similarity_chart(
     plt.tight_layout()
     return fig
 
+
+_FEATURE_GROUPS = {
+    "Zone distribution": lambda c: c.startswith("zone_"),
+    "Shot selection":    lambda c: c.startswith("shot_"),
+    "Control":           lambda c: c.startswith("ctl_line_"),
+    "Strike":            lambda c: c.startswith("scores_line_"),
+}
+
+def _sim_row(df: pd.DataFrame, batter: str):
+    X = df.to_numpy(dtype=float)
+    if X.shape[1] == 0 or X.shape[0] < 2 or batter not in df.index:
+        return None
+    Xs = StandardScaler().fit_transform(X)
+    shape_sim = cosine_similarity(normalize(Xs, axis=1))
+    mags = np.linalg.norm(Xs, axis=1)
+    mag_sim = np.exp(-np.abs(mags[:, None] - mags[None, :]))
+    pos = df.index.get_loc(batter)
+    return pd.Series((shape_sim * mag_sim)[pos], index=df.index)
+
+def compute_feature_group_breakdown(feat_data, batter, top_n=5):
+    """
+    feat_data: {length: {batter_name: {feature: value}}}  (all batters, from /feat-data)
+    Returns:   {group_name: [{"batter": str, "similarity": float}, ...]}
+    """
+    breakdown = {}
+    for group_name, col_filter in _FEATURE_GROUPS.items():
+        parts = []
+        for ln_data in feat_data.values():
+            if not ln_data or batter not in ln_data:
+                continue
+            df = pd.DataFrame.from_dict(ln_data, orient='index')
+            cols = [c for c in df.columns if col_filter(c)]
+            if not cols:
+                continue
+            s = _sim_row(df[cols], batter)
+            if s is not None:
+                parts.append(s)
+
+        if not parts:
+            breakdown[group_name] = []
+            continue
+
+        mean_sim = pd.concat(parts, axis=1).mean(axis=1).drop(batter, errors='ignore')
+        top = mean_sim.sort_values(ascending=False).head(top_n)
+        breakdown[group_name] = [{"batter": b, "similarity": float(v)} for b, v in top.items()]
+
+    return breakdown
+
+
+def create_feature_group_breakdown(breakdown_data, batter_name, lengths, bowl_kind):
+    """
+    4-panel chart showing independent top-5 similar batters per feature group.
+
+    breakdown_data: {group_name: [{"batter": str, "similarity": float}, ...]}
+    """
+    if not breakdown_data:
+        return None
+
+    groups = list(breakdown_data.keys())
+    n_groups = len(groups)
+    if n_groups == 0:
+        return None
+
+    ncols = 2
+    nrows = (n_groups + 1) // 2
+    fig, axes = plt.subplots(nrows, ncols, figsize=(13, 4 * nrows))
+    fig.patch.set_facecolor('#0d0d0d')
+
+    # Flatten axes so we can index them 0..n_groups-1
+    axes_flat = np.array(axes).flatten()
+
+    cmap = LinearSegmentedColormap.from_list(
+        "sim_red",
+        ['#fde047', '#f97316', '#dc2626', '#991b1b', '#450a0a'],
+        N=256
+    )
+
+    for idx, group in enumerate(groups):
+        ax = axes_flat[idx]
+        ax.set_facecolor('#161616')
+
+        rows = breakdown_data[group] or []
+        if not rows:
+            ax.text(0.5, 0.5, 'No data', color='#666', ha='center', va='center',
+                    transform=ax.transAxes, fontsize=10)
+            ax.set_title(group, color='white', fontsize=10, fontweight='bold', pad=7)
+            continue
+
+        names  = [r['batter']     for r in rows]
+        values = [r['similarity'] for r in rows]
+        y_pos  = np.arange(len(names))
+        vmin, vmax = min(values), max(values)
+
+        for y, val in zip(y_pos, values):
+            color = cmap((val - vmin) / (vmax - vmin + 1e-9))
+            for h, a in [(0.8, 0.12), (0.55, 0.18)]:
+                ax.barh(y, val, height=h, color=color, alpha=a)
+            ax.barh(y, val, height=0.5, color=color, edgecolor='white', linewidth=1.2)
+            ax.text(val + 0.005, y, f'{val:.3f}', va='center', ha='left',
+                    color='white', fontsize=8, fontweight='bold',
+                    bbox=dict(facecolor='#111', edgecolor=color,
+                              boxstyle='round,pad=0.2', linewidth=1.2))
+
+        ax.set_yticks(y_pos)
+        ax.set_yticklabels(names, color='white', fontsize=9, fontweight='bold')
+        ax.invert_yaxis()
+        ax.set_title(group, color='white', fontsize=10, fontweight='bold', pad=7)
+        ax.set_xlabel('Similarity', color='#aaa', fontsize=8)
+        ax.set_xlim(0, max(values) * 1.22)
+        ax.tick_params(colors='white', labelsize=8)
+        ax.spines[['top', 'right']].set_visible(False)
+        ax.spines['left'].set_color('#333')
+        ax.spines['bottom'].set_color('#333')
+        ax.grid(axis='x', alpha=0.12, color='white')
+        ax.set_axisbelow(True)
+
+    # Hide any unused subplot slots
+    for idx in range(n_groups, len(axes_flat)):
+        axes_flat[idx].set_visible(False)
+
+    fig.suptitle(
+        f'Feature Group Similarity  |  {batter_name}\n'
+        f'{", ".join(map(str, lengths))}  •  {bowl_kind}',
+        color='white', fontsize=12, fontweight='bold', y=1.01
+    )
+    plt.tight_layout()
+    return fig
 
 
 def plot_intrel_pitch(
