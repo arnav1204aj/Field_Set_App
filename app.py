@@ -1816,7 +1816,7 @@ if active_view == "Analysis":
                         Understanding Zone and Shot Strengths
                     </h3>
                     <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem;">
-                        The charts show how the batter distributes their runs across four key regions and different shots.<strong> To understand the batter's true strength 
+                        The charts show how the batter distributes their controlled runs across four key regions and different shots.<strong> To understand the batter's true strength 
                         in a particular region or playing a particular shot, we compare his/her distributions to an 
                         average batter's distributions </strong>. Average batter's calculations are done on the same 
                         line-length distribution the batter has faced in his/her career. The calculations consider run scoring
