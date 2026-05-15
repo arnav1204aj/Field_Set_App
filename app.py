@@ -638,14 +638,6 @@ def _calc_p95_radius(ww_data: Dict[str, Any], lengths: List[str]) -> float:
     return float(np.percentile(norms, 95)) if norms else 0.0
 
 
-def _to_bat_hand_short(batting_style: str) -> str:
-    style = (batting_style or "").strip().lower()
-    
-    if style == "right-hand-bat":
-        return "RHB"
-    if style == "left-hand-bat":
-        return "LHB"
-    return "-"
 
 
 # Initialize session state
@@ -1328,7 +1320,7 @@ if active_view == "Analysis":
         player_meta = {}
         if players_list:
             for player in players_list:
-                if str(player.get("fullname", "")).strip().lower() == selected_batter.strip().lower():
+                if str(player.get("display_name", "")).strip().lower() == selected_batter.strip().lower():
                     player_meta = player
                     break
 
@@ -1338,42 +1330,41 @@ if active_view == "Analysis":
                 unsafe_allow_html=True,
             )
         else:
-            player_img_url = (player_meta.get("image_path", "") or "").strip()
-            country_flag = (player_meta.get("country_image_path", "") or "").strip()
+            player_img_url = (player_meta.get("headshot_url", "") or "").strip()
+            country_flag = (player_meta.get("flag_url", "") or "").strip()
             country_name = str(player_meta.get("country_name", "") or "-")
-            bat_hand_short = _to_bat_hand_short(str(player_meta.get("battingstyle", "") or ""))
+            bat_hand_short = str(player_meta.get("batting_style_short", "") or "").upper()
             flag_html = (
                 f'<img src="{country_flag}" alt="country flag" style="height: 1em; width: auto; border-radius: 2px; object-fit: contain; vertical-align: middle; margin-left: 0.4rem;" />'
                 if country_flag else ""
             )
-            image_html = (
-                f'<img src="{player_img_url}" alt="{selected_batter}" style="width: clamp(180px, 20vw, 260px); border-radius: 12px; display: block;" />'
-                if player_img_url
-                else ""
-            )
-
-            st.markdown(
-                f"""
-                <div style="
-                    width: 100%;
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    gap: 1rem;
-                    margin: 0 0 0.6rem 0;
-                ">
-                    <div style="display:flex; align-items:center; justify-content:center;">
-                        {image_html}
+            if player_img_url:
+                st.markdown(
+                    f"""
+                    <div style="width:100%;display:flex;justify-content:center;align-items:center;gap:1rem;margin:0 0 0.6rem 0;">
+                        <div style="display:flex;align-items:center;justify-content:center;">
+                            <img src="{player_img_url}" alt="{selected_batter}" style="width:clamp(180px,20vw,260px);border-radius:12px;display:block;" />
+                        </div>
+                        <div style="display:flex;flex-direction:column;justify-content:center;min-width:280px;">
+                            <p style="margin:0;text-align:center;font-size:1.35rem;font-weight:700;color:#ffffff;">{selected_batter}</p>
+                            <p style="margin:0.55rem 0 0 0;text-align:center;font-size:1.02rem;font-weight:600;color:rgba(255,255,255,0.9);">{country_name}{flag_html}</p>
+                            <p style="margin:0.55rem 0 0 0;text-align:center;font-size:1rem;font-weight:700;color:#fca5a5;">{bat_hand_short}</p>
+                        </div>
                     </div>
-                    <div style="display:flex; flex-direction:column; justify-content:center; min-width: 280px;">
-                        <p style="margin:0; text-align:center; font-size:1.35rem; font-weight:700; color:#ffffff;">{selected_batter}</p>
-                        <p style="margin:0.55rem 0 0 0; text-align:center; font-size:1.02rem; font-weight:600; color:rgba(255,255,255,0.9);">{country_name}{flag_html}</p>
-                        <p style="margin:0.55rem 0 0 0; text-align:center; font-size:1rem; font-weight:700; color:#fca5a5;">{bat_hand_short}</p>
+                    """,
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(
+                    f"""
+                    <div style="width:100%;display:flex;flex-direction:column;align-items:center;margin:0 0 0.6rem 0;">
+                        <p style="margin:0;text-align:center;font-size:1.35rem;font-weight:700;color:#ffffff;">{selected_batter}</p>
+                        <p style="margin:0.55rem 0 0 0;text-align:center;font-size:1.02rem;font-weight:600;color:rgba(255,255,255,0.9);">{country_name}{flag_html}</p>
+                        <p style="margin:0.55rem 0 0 0;text-align:center;font-size:1rem;font-weight:700;color:#fca5a5;">{bat_hand_short}</p>
                     </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+                    """,
+                    unsafe_allow_html=True,
+                )
 
     if submit and "Field Overview" in selected_sections:
         st.markdown('---')
