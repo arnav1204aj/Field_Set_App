@@ -3,7 +3,8 @@ st.set_page_config(layout="wide", page_title="Optimal Field Setting | Cricket An
 
 import pandas as pd
 import numpy as np
-from functions import plot_int_wagons, plot_intent_impact, plot_field_setting, plot_intrel_pitch, plot_intrel_pitch_avg, plot_intrel_pitch_batter, plot_sector_ev_heatmap, create_shot_profile_chart, create_similarity_chart, compute_feature_group_breakdown, create_zone_strength_table, get_top_similar_batters, generate_player_profile_card, plot_matchups_chart, plot_variations_chart
+import matplotlib.pyplot as plt
+from functions import plot_int_wagons, plot_intent_impact, plot_field_setting, plot_intrel_pitch, plot_intrel_pitch_avg, plot_intrel_pitch_batter, plot_sector_ev_heatmap, create_shot_profile_chart, create_similarity_chart, compute_feature_group_breakdown, create_zone_strength_table, get_top_similar_batters, generate_player_profile_card, plot_matchups_chart, plot_variations_chart, create_entropy_radar
 
 
 
@@ -105,6 +106,7 @@ ANALYSIS_SECTIONS = [
     "Intent Impact Progression",
     "Matchups",
     "Variations Matchups",
+    "Entropy Analysis",
 ]
 
 COMPARE_SECTIONS = [
@@ -264,6 +266,12 @@ def fetch_feat_data(mode: str, batter: str, bowl_kind: str, lengths: List[str]) 
         method="POST",
         data={"mode": mode, "batter": batter, "bowl_kind": bowl_kind, "lengths": lengths, "top_n": 5}
     )
+    return response if response else None
+
+@st.cache_data(ttl=600, max_entries=50)
+def fetch_entropy(mode: str, batter: str) -> Optional[Dict]:
+    """Fetch entropy analysis data from backend (MENS_T20 only)."""
+    response = make_request(f"/entropy/{mode}/{batter}")
     return response if response else None
 
 @st.cache_data(ttl=600, max_entries=50)
@@ -2067,6 +2075,82 @@ if active_view == "Analysis":
                         """,
                         unsafe_allow_html=True,
                     )
+
+    if submit and "Entropy Analysis" in selected_sections:
+        st.markdown('---')
+        bowl_label = "Pace" if "pace" in selected_bowl_kind else "Spin"
+        st.markdown(f'<p class="section-header">Entropy Analysis</p>', unsafe_allow_html=True)
+        st.markdown("<div style='margin-top:0.75rem;'></div>", unsafe_allow_html=True)
+        if current_mode in ("WOMENS_T20", "MENS_ODI"):
+            st.markdown(
+                """
+                <div style="
+                    background: linear-gradient(135deg, rgba(153,27,27,0.15) 0%, rgba(220,38,38,0.15) 100%);
+                    padding: 1.5rem 2rem;
+                    border-radius: 12px;
+                    border: 1px solid rgba(220,38,38,0.3);
+                    text-align: center;
+                ">
+                    <p style="color: #fca5a5; font-size: 1.25rem; font-weight: 700; margin: 0;">
+                        Entropy Analysis — Coming Soon
+                    </p>
+                    <p style="color: rgba(255,255,255,0.7); font-size: 0.98rem; margin-top: 0.6rem; margin-bottom: 0;">
+                        Entropy analysis is currently available for Men's T20 only.
+                        Women's T20 and Men's ODI support is on the way.
+                    </p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        else:
+            try:
+                entropy_resp = fetch_entropy(current_mode, selected_batter)
+                entropy_data = entropy_resp.get("entropy", {}) if entropy_resp else {}
+                if entropy_data:
+                    bowl_key = "pace" if "pace" in selected_bowl_kind else "spin"
+                    entropy_filtered = {bowl_key: entropy_data.get(bowl_key, {})}
+                    col_chart, col_badges = st.columns([1.1, 0.9], gap="large")
+                    with col_chart:
+                        fig_entropy = create_entropy_radar(entropy_filtered, selected_batter, bowl_key)
+                        st.pyplot(fig_entropy, use_container_width=True)
+                        plt.close(fig_entropy)
+                    with col_badges:
+                        for bowl_type, label, color, bg in [
+                            ("pace",  "Pace",  "#ef4444", "rgba(239,68,68,0.08)"),
+                            ("spin",  "Spin",  "#a78bfa", "rgba(167,139,250,0.08)"),
+                        ]:
+                            if bowl_type != bowl_key:
+                                continue
+                            d = entropy_filtered.get(bowl_type, {})
+                            def _dim_label(v):
+                                s = str(v).capitalize()
+                                return s.replace("Style", "Bowl Style").replace("style", "Bowl Style")
+                            focus_val    = _dim_label(d.get("focus",    "—"))
+                            strength_val = _dim_label(d.get("strength", "—"))
+                            st.markdown(
+                                f"""<div style="background:{bg};border:1px solid {color}33;
+                                        border-radius:12px;padding:1rem 1.2rem;margin-bottom:0.9rem;">
+                                    <div style="margin-bottom:0.45rem;">
+                                        <span style="color:rgba(255,255,255,0.45);font-size:0.72rem;
+                                                     font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">
+                                            Focus On</span>
+                                        <span style="color:#fca5a5;font-weight:700;font-size:0.9rem;
+                                                     margin-left:8px;">{focus_val}</span>
+                                    </div>
+                                    <div>
+                                        <span style="color:rgba(255,255,255,0.45);font-size:0.72rem;
+                                                     font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">
+                                            Least Affected By</span>
+                                        <span style="color:#86efac;font-weight:700;font-size:0.9rem;
+                                                     margin-left:8px;">{strength_val}</span>
+                                    </div>
+                                </div>""",
+                                unsafe_allow_html=True,
+                            )
+                else:
+                    st.warning("Entropy data unavailable for this batter.")
+            except Exception as _e:
+                st.warning(f"Could not load entropy analysis: {_e}")
 
     if not submit:
         st.info("Please select parameters and click **Generate Results**")

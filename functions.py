@@ -1951,6 +1951,64 @@ def create_feature_group_breakdown(breakdown_data, batter_name, lengths, bowl_ki
     return fig
 
 
+def create_entropy_radar(entropy_data: dict, batter_name: str, bowl_kind: str = ""):
+    """Radar chart comparing pace vs spin entropy across Field, Style, Line, Length."""
+    dims = ["Field", "Bowl Style", "Line", "Length"]
+    keys = ["field", "style", "line", "length"]
+    N = len(dims)
+
+    angles = np.linspace(0, 2 * np.pi, N, endpoint=False)
+    angles_closed = np.append(angles, angles[0])
+
+    fig, ax = plt.subplots(figsize=(5.5, 5.5), subplot_kw=dict(polar=True))
+    fig.patch.set_alpha(0.0)
+    ax.set_facecolor("#0b0005")
+    ax.patch.set_alpha(0.90)
+
+    for r in [0.25, 0.5, 0.75, 1.0]:
+        ax.plot(np.linspace(0, 2 * np.pi, 200), np.full(200, r),
+                color='white', alpha=0.07, linewidth=0.8, zorder=0)
+
+    bowl_configs = [
+        ("pace", "#ef4444", "Pace"),
+        ("spin", "#a78bfa", "Spin"),
+    ]
+
+    for bowl_type, color, label in bowl_configs:
+        d = entropy_data.get(bowl_type, {})
+        vals = [float(d.get(k, 0)) for k in keys]
+        vals_closed = vals + [vals[0]]
+
+        for lw, alpha in [(14, 0.04), (9, 0.07), (5, 0.11)]:
+            ax.plot(angles_closed, vals_closed, color=color, linewidth=lw, alpha=alpha, zorder=1)
+
+        ax.plot(angles_closed, vals_closed, color=color, linewidth=2.2, label=label, zorder=3)
+        ax.fill(angles_closed, vals_closed, alpha=0.13, color=color, zorder=2)
+
+        for angle, val in zip(angles, vals):
+            ax.plot(angle, val, 'o', color=color, markersize=5, zorder=4,
+                    markeredgecolor='white', markeredgewidth=1.2)
+
+    ax.set_xticks(angles)
+    ax.set_xticklabels(dims, color='white', fontsize=11, fontweight='bold', family='sans-serif')
+    ax.set_ylim(0, 1)
+    ax.set_yticks([0.25, 0.5, 0.75, 1.0])
+    ax.set_yticklabels(['0.25', '0.50', '0.75', '1.00'],
+                       color=(1, 1, 1, 0.25), fontsize=7)
+    ax.yaxis.set_tick_params(width=0)
+
+    ax.grid(color='white', alpha=0.08, linewidth=0.8)
+    ax.spines['polar'].set_color((1, 1, 1, 0.12))
+    ax.spines['polar'].set_linewidth(1.5)
+
+    vs_label = f" vs {bowl_kind.capitalize()}" if bowl_kind else ""
+    ax.set_title(f"Entropy Profile{vs_label}\n{batter_name}",
+                 color='white', fontsize=12, fontweight='bold', pad=38)
+
+    plt.tight_layout()
+    return fig
+
+
 def plot_intrel_pitch(
     metric,
     heading,    
