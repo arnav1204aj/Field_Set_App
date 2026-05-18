@@ -2125,7 +2125,7 @@ if active_view == "Analysis":
                             def _dim_label(v):
                                 s = str(v).capitalize()
                                 return s.replace("Style", "Bowl Style").replace("style", "Bowl Style")
-                            focus_val    = _dim_label(d.get("focus",    "—"))
+                            focus_val    = str(d.get("focus",    "—")).capitalize()
                             strength_val = _dim_label(d.get("strength", "—"))
                             st.markdown(
                                 f"""<div style="background:{bg};border:1px solid {color}33;
