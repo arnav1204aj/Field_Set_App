@@ -1951,67 +1951,141 @@ def create_feature_group_breakdown(breakdown_data, batter_name, lengths, bowl_ki
     return fig
 
 
-def create_entropy_radar(entropy_data: dict, batter_name: str, bowl_kind: str = ""):
-    """Radar chart comparing pace vs spin entropy across Field, Style, Line, Length."""
+def create_weakness_tiles(weakness_data: dict, batter_name: str, bowl_kind: str = ""):
+    """Colored tiles showing certainty of weakness. Red = dangerous, green = safe."""
+    from matplotlib.patches import FancyBboxPatch
     dims = ["Field", "Bowl Style", "Line", "Length"]
     keys = ["field", "style", "line", "length"]
-    N = len(dims)
 
-    angles = np.linspace(0, 2 * np.pi, N, endpoint=False)
-    angles_closed = np.append(angles, angles[0])
+    bowl_type = list(weakness_data.keys())[0] if weakness_data else "pace"
+    d = weakness_data.get(bowl_type, {})
+    # high value = more predictable = exploit this
+    weakness_vals = [1.0 - float(d.get(k, 0)) for k in keys]
+    focus_raw    = str(d.get("focus",    "")).lower()
+    strength_raw = str(d.get("strength", "")).lower()
 
-    fig, ax = plt.subplots(figsize=(5.5, 5.5), subplot_kw=dict(polar=True))
+    focus_idx    = next((i for i, k in enumerate(keys) if k in focus_raw),    -1)
+    strength_idx = next((i for i, k in enumerate(keys) if k in strength_raw), -1)
+
+    def weakness_color(v):
+        # Green → red by v=0.25, then red → dark red from 0.25→1.0
+        if v <= 0.25:
+            t = v / 0.25
+            r = int(34  + (210 - 34)  * t)
+            g = int(197 + (20  - 197) * t)
+            b = int(94  + (20  - 94)  * t)
+        else:
+            t = (v - 0.25) / 0.75
+            r = int(210 + (80  - 210) * t)
+            g = int(20  + (0   - 20)  * t)
+            b = int(20  + (0   - 20)  * t)
+        return (r / 255, g / 255, b / 255)
+
+    fig, ax = plt.subplots(figsize=(10, 3.8))
     fig.patch.set_alpha(0.0)
-    ax.set_facecolor("#0b0005")
-    ax.patch.set_alpha(0.90)
+    ax.set_facecolor("#060004")
+    ax.patch.set_alpha(0.97)
 
-    for r in [0.25, 0.5, 0.75, 1.0]:
-        ax.plot(np.linspace(0, 2 * np.pi, 200), np.full(200, r),
-                color='white', alpha=0.07, linewidth=0.8, zorder=0)
+    tile_w   = 1.9
+    tile_h   = 1.5
+    spacing  = 2.6
+    pad      = 0.09
 
-    bowl_configs = [
-        ("pace", "#ef4444", "Pace"),
-        ("spin", "#a78bfa", "Spin"),
-    ]
+    for i, (dim, val) in enumerate(zip(dims, weakness_vals)):
+        cx    = i * spacing
+        color = weakness_color(val)
 
-    for bowl_type, color, label in bowl_configs:
-        d = entropy_data.get(bowl_type, {})
-        vals = [float(d.get(k, 0)) for k in keys]
-        vals_closed = vals + [vals[0]]
+        # Danger glow behind tile for high weakness
+        if val > 0.25:
+            for gpad, galpha in [(0.18, 0.08 * val), (0.10, 0.14 * val)]:
+                ax.add_patch(FancyBboxPatch(
+                    (cx - tile_w/2 - gpad, -tile_h/2 - gpad),
+                    tile_w + gpad*2, tile_h + gpad*2,
+                    boxstyle=f"round,pad={pad}",
+                    facecolor="none", edgecolor=color,
+                    linewidth=2.5, alpha=galpha, zorder=1
+                ))
 
-        for lw, alpha in [(14, 0.04), (9, 0.07), (5, 0.11)]:
-            ax.plot(angles_closed, vals_closed, color=color, linewidth=lw, alpha=alpha, zorder=1)
+        # Main tile
+        ax.add_patch(FancyBboxPatch(
+            (cx - tile_w/2, -tile_h/2), tile_w, tile_h,
+            boxstyle=f"round,pad={pad}",
+            facecolor=color,
+            edgecolor=(1, 1, 1, 0.15), linewidth=1.0, zorder=2
+        ))
 
-        ax.plot(angles_closed, vals_closed, color=color, linewidth=2.2, label=label, zorder=3)
-        ax.fill(angles_closed, vals_closed, alpha=0.13, color=color, zorder=2)
+        # Subtle inner highlight strip at top of tile
+        ax.add_patch(FancyBboxPatch(
+            (cx - tile_w/2 + 0.08, tile_h/2 - 0.26), tile_w - 0.16, 0.18,
+            boxstyle="round,pad=0.03",
+            facecolor=(1, 1, 1, 0.08), edgecolor="none", zorder=3
+        ))
 
-        for angle, val in zip(angles, vals):
-            ax.plot(angle, val, 'o', color=color, markersize=5, zorder=4,
-                    markeredgecolor='white', markeredgewidth=1.2)
+        # Dimension name (top of tile)
+        ax.text(cx, tile_h/2 - 0.22, dim,
+                ha="center", va="center",
+                color=(1, 1, 1, 1.0), fontsize=11,
+                fontweight="bold", family="monospace", zorder=4)
 
-    ax.set_xticks(angles)
-    ax.set_xticklabels(dims, color='white', fontsize=11, fontweight='bold', family='sans-serif')
-    ax.set_ylim(0, 1)
-    ax.set_yticks([0.25, 0.5, 0.75, 1.0])
-    ax.set_yticklabels(['0.25', '0.50', '0.75', '1.00'],
-                       color=(1, 1, 1, 0.25), fontsize=7)
-    ax.yaxis.set_tick_params(width=0)
+        # Large value (center)
+        ax.text(cx, -0.08, f"{val:.2f}",
+                ha="center", va="center",
+                color="white", fontsize=26,
+                fontweight="bold", family="monospace", zorder=4)
 
-    ax.grid(color='white', alpha=0.08, linewidth=0.8)
-    ax.spines['polar'].set_color((1, 1, 1, 0.12))
-    ax.spines['polar'].set_linewidth(1.5)
+        # Badge below tile
+        badge_y = -tile_h/2 - 0.14
+        if i == focus_idx:
+            ax.text(cx, badge_y, "▲ Focus On",
+                    ha="center", va="top", color=(1.0, 1.0, 0.4, 1.0),
+                    fontsize=10.5, fontweight="bold", zorder=5,
+                    bbox=dict(facecolor=(180/255, 0, 0, 0.55),
+                              edgecolor=(255/255, 80/255, 80/255, 1.0),
+                              boxstyle="round,pad=0.42", linewidth=2.2))
+        elif i == strength_idx:
+            ax.text(cx, badge_y, "✦ Least Affected",
+                    ha="center", va="top", color=(1.0, 1.0, 1.0, 1.0),
+                    fontsize=9.5, fontweight="bold", zorder=5,
+                    bbox=dict(facecolor=(20/255, 160/255, 70/255, 0.45),
+                              edgecolor=(100/255, 255/255, 140/255, 1.0),
+                              boxstyle="round,pad=0.42", linewidth=2.0))
+
+    # Gradient legend bar at bottom
+    n_grad = 200
+    legend_y = -tile_h/2 - 0.72
+    legend_x0 = -tile_w/2
+    legend_w  = (len(dims) - 1) * spacing + tile_w
+    seg_w = legend_w / n_grad
+    for j in range(n_grad):
+        v = j / (n_grad - 1)
+        c = weakness_color(v)
+        ax.add_patch(plt.Rectangle(
+            (legend_x0 + j * seg_w, legend_y), seg_w + 0.01, 0.10,
+            facecolor=c, edgecolor="none", zorder=2
+        ))
+    ax.text(legend_x0 - 0.05, legend_y + 0.05, "Safe",
+            ha="right", va="center", color=(34/255,197/255,94/255),
+            fontsize=7.5, fontweight="bold")
+    ax.text(legend_x0 + legend_w + 0.05, legend_y + 0.05, "Danger",
+            ha="left", va="center", color=(239/255,68/255,68/255),
+            fontsize=7.5, fontweight="bold")
+
+    n = len(dims)
+    ax.set_xlim(-tile_w/2 - 0.4, (n-1)*spacing + tile_w/2 + 0.4)
+    ax.set_ylim(-tile_h/2 - 1.05, tile_h/2 + 0.45)
+    ax.set_aspect("equal")
+    ax.axis("off")
 
     vs_label = f" vs {bowl_kind.capitalize()}" if bowl_kind else ""
-    ax.set_title(f"Entropy Profile{vs_label}\n{batter_name}",
-                 color='white', fontsize=12, fontweight='bold', pad=38)
-
+    ax.set_title(f"Certainty of Weakness{vs_label} — {batter_name}",
+                 color="white", fontsize=12, fontweight="bold", pad=16)
     plt.tight_layout()
     return fig
 
 
 def plot_intrel_pitch(
     metric,
-    heading,    
+    heading,
     intrel_results,
     batter,
     lengths,
