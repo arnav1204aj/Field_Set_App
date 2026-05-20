@@ -4,7 +4,7 @@ st.set_page_config(layout="wide", page_title="Optimal Field Setting | Cricket An
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from functions import plot_int_wagons, plot_intent_impact, plot_field_setting, plot_intrel_pitch, plot_intrel_pitch_avg, plot_intrel_pitch_batter, plot_sector_ev_heatmap, create_shot_profile_chart, create_similarity_chart, compute_feature_group_breakdown, create_zone_strength_table, get_top_similar_batters, generate_player_profile_card, plot_matchups_chart, plot_variations_chart, create_entropy_radar
+from functions import plot_int_wagons, plot_intent_impact, plot_field_setting, plot_intrel_pitch, plot_intrel_pitch_avg, plot_intrel_pitch_batter, plot_sector_ev_heatmap, create_shot_profile_chart, create_similarity_chart, compute_feature_group_breakdown, create_zone_strength_table, get_top_similar_batters, generate_player_profile_card, plot_matchups_chart, plot_variations_chart, create_weakness_tiles
 
 
 
