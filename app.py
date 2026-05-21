@@ -2111,6 +2111,35 @@ if active_view == "Analysis":
                     fig_tiles = create_weakness_tiles(weakness_filtered, selected_batter, bowl_key)
                     st.pyplot(fig_tiles, use_container_width=True)
                     plt.close(fig_tiles)
+                    st.markdown(
+                        """
+                        <div style="
+                            background: linear-gradient(135deg, rgba(153,27,27,0.2) 0%, rgba(220,38,38,0.2) 100%);
+                            padding: 1.5rem;
+                            border-radius: 12px;
+                            border: 1px solid rgba(220,38,38,0.3);
+                        ">
+                            <h3 style="color: #fca5a5; font-size: 1.2rem; font-weight: 700; margin-top: 0;">
+                                Understanding Certainty of Weakness
+                            </h3>
+                            <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem;">
+                                Measures how predictably a batter struggles within a dimension — Field, Bowl Style, Line, or Length.
+                            </p>
+                            <div style="margin: 0.8rem 0;">
+                                <strong style="color: #f87171;">High Certainty:</strong>
+                                <span style="color: rgba(255,255,255,0.85);"> Performance is concentrated — the batter reliably struggles against specific values of that dimension. A clear target for the fielding side.</span>
+                            </div>
+                            <div style="margin: 0.8rem 0;">
+                                <strong style="color: #86efac;">Low Certainty:</strong>
+                                <span style="color: rgba(255,255,255,0.85);"> Performance is spread evenly across all values — this dimension offers little tactical leverage as batter is less affected by changes here.</span>
+                            </div>
+                            <p style="color: rgba(255,255,255,0.75); font-size: 0.9rem; margin-top: 1rem; font-style: italic;">
+                                Focus on dimensions with high certainty — that is where the batter is most exploitable.
+                            </p>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
                 else:
                     st.warning("Certainty of Weakness data unavailable for this batter.")
             except Exception as _e:
