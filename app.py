@@ -4,7 +4,7 @@ st.set_page_config(layout="wide", page_title="Optimal Field Setting | Cricket An
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from functions import plot_int_wagons, plot_intent_impact, plot_field_setting, plot_intrel_pitch, plot_intrel_pitch_avg, plot_intrel_pitch_batter, plot_sector_ev_heatmap, create_shot_profile_chart, create_similarity_chart, compute_feature_group_breakdown, create_zone_strength_table, get_top_similar_batters, generate_player_profile_card, plot_matchups_chart, plot_variations_chart, create_weakness_tiles
+from functions import plot_int_wagons, plot_intent_impact, plot_field_setting, plot_intrel_pitch, plot_intrel_pitch_avg, plot_intrel_pitch_batter, plot_line_intrel_pitch, plot_line_intrel_pitch_batter, plot_line_intrel_pitch_avg, plot_sector_ev_heatmap, create_shot_profile_chart, create_similarity_chart, compute_feature_group_breakdown, create_zone_strength_table, get_top_similar_batters, generate_player_profile_card, plot_matchups_chart, plot_variations_chart, create_weakness_tiles
 
 
 
@@ -101,6 +101,7 @@ ANALYSIS_SECTIONS = [
     "Intelligent Wagon Wheel",
     "Similar Batters",
     "Intent, Reliability, Int-Rel by length",
+    "Intent, Reliability, Int-Rel by line",
     "Relative Zone Strengths",
     "Relative Shot Strengths",
     "Intent Impact Progression",
@@ -279,6 +280,22 @@ def fetch_intrel_data(mode: str, batter: str, bowl_kind: str, lengths: List[str]
     """Fetch intent-reliability data from backend"""
     response = make_request(
         "/intrel-data",
+        method="POST",
+        data={
+            "mode": mode,
+            "batter": batter,
+            "bowl_kind": bowl_kind,
+            "lengths": lengths,
+            "outfielders": ""
+        }
+    )
+    return response if response else None
+
+@st.cache_data(ttl=600, max_entries=50)
+def fetch_line_intrel_data(mode: str, batter: str, bowl_kind: str, lengths: List[str]) -> Optional[Dict]:
+    """Fetch line-based intent-reliability data from backend (MENS_T20 only)."""
+    response = make_request(
+        "/line-intrel-data",
         method="POST",
         data={
             "mode": mode,
@@ -1735,6 +1752,64 @@ if active_view == "Analysis":
                     </p>
                 </div>
                 """, unsafe_allow_html=True)
+
+    if submit and "Intent, Reliability, Int-Rel by line" in selected_sections:
+        st.markdown('---')
+        st.markdown('<p class="section-header">Intent, Reliability, Int-Rel by line</p>', unsafe_allow_html=True)
+        if current_mode != "MENS_T20":
+            st.markdown(
+                """
+                <div style="
+                    background: linear-gradient(135deg, rgba(153,27,27,0.15) 0%, rgba(220,38,38,0.15) 100%);
+                    padding: 1.5rem 2rem; border-radius: 12px;
+                    border: 1px solid rgba(220,38,38,0.3); text-align: center;
+                ">
+                    <p style="color: #fca5a5; font-size: 1.25rem; font-weight: 700; margin: 0;">
+                        Coming Soon
+                    </p>
+                    <p style="color: rgba(255,255,255,0.7); font-size: 0.98rem; margin-top: 0.6rem; margin-bottom: 0;">
+                        Line-based Intent-Reliability is currently available for Men's T20 only.
+                    </p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        else:
+            try:
+                line_intrel_data = fetch_line_intrel_data(current_mode, selected_batter, selected_bowl_kind, selected_lengths)
+                line_payload = line_intrel_data.get("line_intrel_selected", {}) if line_intrel_data else {}
+                c1, c2, c3 = st.columns([1, 1, 1], gap="small")
+                with c1:
+                    st.pyplot(plot_line_intrel_pitch("intent_by_line", "Intent", line_payload, selected_batter, selected_bowl_kind, 5), use_container_width=True)
+                with c2:
+                    st.pyplot(plot_line_intrel_pitch("reliability_by_line", "Reliability", line_payload, selected_batter, selected_bowl_kind, 5), use_container_width=True)
+                with c3:
+                    st.pyplot(plot_line_intrel_pitch("intrel_by_line", "Int-Rel", line_payload, selected_batter, selected_bowl_kind, 5), use_container_width=True)
+                st.markdown('<div style="margin-top:-5rem;"></div>', unsafe_allow_html=True)
+                _, c4, c5, _ = st.columns([0.25, 1, 1, 0.25], gap="small")
+                with c4:
+                    st.pyplot(plot_line_intrel_pitch_batter(line_payload, selected_batter, selected_bowl_kind, 5), use_container_width=True)
+                with c5:
+                    st.pyplot(plot_line_intrel_pitch_avg(line_payload, selected_batter, selected_bowl_kind, 5), use_container_width=True)
+            except Exception as _e:
+                st.warning(f"Line intent-reliability data unavailable: {_e}")
+        st.markdown("""
+            <div style="
+                background: linear-gradient(135deg, rgba(153,27,27,0.2) 0%, rgba(220,38,38,0.2) 100%);
+                padding: 1.5rem; border-radius: 12px;
+                border: 1px solid rgba(220,38,38,0.3);
+            ">
+                <h3 style="color: #fca5a5; font-size: 1.2rem; font-weight: 700; margin-top: 0;">
+                    Understanding Intent, Reliability, Int-Rel by Line
+                </h3>
+                <p style="color: rgba(255,255,255,0.85); line-height: 1.7; font-size: 0.95rem;">
+                    The same Intent, Reliability and Int-Rel metrics as for length — but broken down by <strong>bowling line</strong>
+                    instead of length. Each zone (Wide Off, Outside Off, On Stumps, Down Leg) shows how the batter
+                    performs against deliveries on that line, relative to an average batter in the same conditions.
+                    Note that these values are not a function of the length filter, these values include all lengths.
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
 
     if submit and "Relative Zone Strengths" in selected_sections:
         st.markdown('---')

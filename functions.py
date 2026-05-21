@@ -2578,6 +2578,291 @@ def plot_intrel_pitch_batter(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Line Intrel Visualizations (front-on "end-on" view, left=off, right=leg)
+# ─────────────────────────────────────────────────────────────────────────────
+
+_ZONE_W    = 0.23                    # equal width for every zone
+_LINE_ZONES = [
+    ("WIDE_OUTSIDE_OFFSTUMP", 0.04,             0.04 + _ZONE_W,        "Wide Off"),
+    ("OUTSIDE_OFFSTUMP",      0.04 + _ZONE_W,   0.04 + 2 * _ZONE_W,   "Outside Off"),
+    ("ON_THE_STUMPS",         0.04 + 2*_ZONE_W, 0.04 + 3 * _ZONE_W,   "On Stumps"),
+    ("DOWN_LEG",              0.04 + 3*_ZONE_W, 0.04 + 4 * _ZONE_W,   "Down Leg"),
+]
+_STUMP_XS  = [0.50, 0.615, 0.73]   # off, middle, leg — edges/centre of ON_THE_STUMPS
+_ZONE_Y0   = 0.12
+_ZONE_Y1   = 0.86
+_STUMP_FRAC = 0.80                  # stumps reach 80 % of zone height → H/W ≈ 2.3
+
+
+def _line_base_fig():
+    """Return (fig, ax) with shared base layout for line pitch views."""
+    fig, ax = plt.subplots(figsize=(5.0, 5.5))
+    fig.patch.set_alpha(0)
+    ax.set_facecolor("none")
+    ax.set_xlim(-0.01, 1.01)
+    ax.set_ylim(-0.08, 1.08)
+    ax.axis("off")
+    fig.subplots_adjust(left=0.01, right=0.99, bottom=0.04, top=0.96)
+    return fig, ax
+
+
+def _line_draw_stumps(ax):
+    zone_h = _ZONE_Y1 - _ZONE_Y0
+    sy0 = _ZONE_Y0
+    sy1 = _ZONE_Y0 + zone_h * _STUMP_FRAC
+    for sx in _STUMP_XS:
+        ax.plot([sx, sx], [sy0, sy1], color="white", linewidth=2.0, zorder=10,
+                solid_capstyle="round")
+    ax.plot([_STUMP_XS[0], _STUMP_XS[1]], [sy1, sy1], color="white", linewidth=1.5, zorder=10)
+    ax.plot([_STUMP_XS[1], _STUMP_XS[2]], [sy1, sy1], color="white", linewidth=1.5, zorder=10)
+    # crease (spans only the 4 zones)
+    ax.plot([0.04, 0.04 + 4 * _ZONE_W], [_ZONE_Y0, _ZONE_Y0],
+            color=(1, 1, 1, 0.35), linewidth=1.5, zorder=3)
+    # off / leg labels
+    ax.text(0.04, _ZONE_Y0 - 0.025, "OFF", ha="left", va="top",
+            color=(1, 1, 1, 0.40), fontsize=7.5, style="italic")
+    ax.text(0.04 + 4 * _ZONE_W, _ZONE_Y0 - 0.025, "LEG", ha="right", va="top",
+            color=(1, 1, 1, 0.40), fontsize=7.5, style="italic")
+
+
+def _line_unpack(v):
+    def _sf(x):
+        try:
+            vv = float(x)
+            return vv if np.isfinite(vv) else np.nan
+        except Exception:
+            return np.nan
+    if isinstance(v, (list, tuple)) and len(v) >= 2:
+        return _sf(v[0]), int(v[1] or 0)
+    if isinstance(v, (int, float, np.floating)):
+        return _sf(v), 0
+    return np.nan, 0
+
+
+def plot_line_intrel_pitch(metric, heading, line_intrel_results, batter, bowl_kind, min_balls=10):
+    """
+    Front-on (end-on) view: one intrel/intent/reliability metric by bowling line.
+    Left = off side, right = leg side. Stumps mark the ON_THE_STUMPS zone edges.
+    """
+    if bowl_kind == "pace bowler":
+        bowl_kind = "pace"
+    else:
+        bowl_kind = "spin"
+
+    data = line_intrel_results or {}
+    line_data = data.get(metric, {})
+    if not isinstance(line_data, dict) or not line_data:
+        raise ValueError(f"No metric data for {metric}")
+
+    colors_list = ["#fde047", "#fbbf24", "#f97316", "#dc2626", "#991b1b", "#450a0a"]
+    cmap = LinearSegmentedColormap.from_list("modern_red", colors_list, N=256)
+    norm = Normalize(vmin=0.5, vmax=1.5)
+    mapper = ScalarMappable(norm=norm, cmap=cmap)
+
+    fig, ax = _line_base_fig()
+
+    for line, x0, x1, label in _LINE_ZONES:
+        val, balls = _line_unpack(line_data.get(line, (np.nan, 0)))
+        no_data = balls < min_balls or np.isnan(val)
+        fc = (0.22, 0.22, 0.22, 0.45) if no_data else mapper.to_rgba(val)
+
+        ax.add_patch(patches.Rectangle(
+            (x0, _ZONE_Y0), x1 - x0, _ZONE_Y1 - _ZONE_Y0,
+            facecolor=fc, edgecolor=(1, 1, 1, 0.20), linewidth=0.8,
+            alpha=0.72 if not no_data else 1.0, zorder=2
+        ))
+
+        cx     = (x0 + x1) / 2
+        stump_top = _ZONE_Y0 + (_ZONE_Y1 - _ZONE_Y0) * _STUMP_FRAC
+        val_y     = (stump_top + _ZONE_Y1) / 2
+        label_y   = (_ZONE_Y0 + stump_top) / 2
+        if line == "ON_THE_STUMPS":
+            ax.text((_STUMP_XS[0] + _STUMP_XS[1]) / 2, label_y, "On",
+                    ha="center", va="center", color=(1, 1, 1, 1.0),
+                    fontsize=18, fontweight="bold", rotation=90, zorder=6)
+            ax.text((_STUMP_XS[1] + _STUMP_XS[2]) / 2, label_y, "Stumps",
+                    ha="center", va="center", color=(1, 1, 1, 1.0),
+                    fontsize=18, fontweight="bold", rotation=90, zorder=6)
+        else:
+            ax.text(cx, label_y, label,
+                    ha="center", va="center", color=(1, 1, 1, 1.0),
+                    fontsize=18, fontweight="bold", rotation=90, zorder=6)
+
+        if no_data:
+            ax.text(cx, val_y, "—", ha="center", va="center",
+                    color=(1, 1, 1, 0.25), fontsize=16, zorder=5)
+        else:
+            ax.text(cx, val_y, f"{val:.2f}",
+                    ha="center", va="center", color="white",
+                    fontsize=16, fontweight="bold", zorder=5)
+
+    _line_draw_stumps(ax)
+
+    ax.text(0.5, _ZONE_Y1 + 0.05, heading, ha="center", va="bottom", color="white",
+            fontsize=11.5, fontweight="bold", zorder=5, clip_on=False)
+    plt.tight_layout()
+    return fig
+
+
+def plot_line_intrel_pitch_batter(line_intrel_results, batter, bowl_kind, min_balls=10):
+    """
+    Front-on view: estimated batter SR and Control% by bowling line.
+    SR = othsr × intent, Control% = othcon × reliability.
+    """
+    if bowl_kind == "pace bowler":
+        bowl_kind = "pace"
+    else:
+        bowl_kind = "spin"
+
+    data = line_intrel_results or {}
+    intent_d  = data.get("intent_by_line", {})
+    rel_d     = data.get("reliability_by_line", {})
+    oth_sr_d  = data.get("othsr", {})
+    oth_con_d = data.get("othcon", {})
+    if not all(isinstance(d, dict) for d in [intent_d, rel_d, oth_sr_d, oth_con_d]):
+        raise ValueError("Invalid batter line payload")
+
+    colors = ["#2563eb", "#16a34a"]
+    fig, ax = _line_base_fig()
+    color_idx = 0
+
+    for line, x0, x1, label in _LINE_ZONES:
+        intent,  bi  = _line_unpack(intent_d.get(line,  (np.nan, 0)))
+        rel,     br  = _line_unpack(rel_d.get(line,     (np.nan, 0)))
+        oth_sr,  bsr = _line_unpack(oth_sr_d.get(line,  (np.nan, 0)))
+        oth_con, bc  = _line_unpack(oth_con_d.get(line, (np.nan, 0)))
+
+        balls = min(bi, br, bsr, bc)
+        no_data = (balls < min_balls or
+                   any(np.isnan(v) for v in [intent, rel, oth_sr, oth_con]))
+
+        if no_data:
+            fc = (0.22, 0.22, 0.22, 0.45)
+        else:
+            fc = colors[color_idx % 2]
+            color_idx += 1
+
+        ax.add_patch(patches.Rectangle(
+            (x0, _ZONE_Y0), x1 - x0, _ZONE_Y1 - _ZONE_Y0,
+            facecolor=fc, edgecolor=(1, 1, 1, 0.20), linewidth=0.8,
+            alpha=0.68 if not no_data else 1.0, zorder=2
+        ))
+
+        cx        = (x0 + x1) / 2
+        stump_top = _ZONE_Y0 + (_ZONE_Y1 - _ZONE_Y0) * _STUMP_FRAC
+        gap       = _ZONE_Y1 - stump_top
+        sr_y      = stump_top + gap * 0.72
+        con_y     = stump_top + gap * 0.35
+        label_y   = (_ZONE_Y0 + stump_top) / 2
+        if line == "ON_THE_STUMPS":
+            ax.text((_STUMP_XS[0] + _STUMP_XS[1]) / 2, label_y, "On",
+                    ha="center", va="center", color=(1, 1, 1, 1.0),
+                    fontsize=18, fontweight="bold", rotation=90, zorder=6)
+            ax.text((_STUMP_XS[1] + _STUMP_XS[2]) / 2, label_y, "Stumps",
+                    ha="center", va="center", color=(1, 1, 1, 1.0),
+                    fontsize=18, fontweight="bold", rotation=90, zorder=6)
+        else:
+            ax.text(cx, label_y, label,
+                    ha="center", va="center", color=(1, 1, 1, 1.0),
+                    fontsize=18, fontweight="bold", rotation=90, zorder=6)
+
+        if no_data:
+            ax.text(cx, sr_y, "—", ha="center", va="center",
+                    color=(1, 1, 1, 0.25), fontsize=14, zorder=5)
+        else:
+            bsr_val  = oth_sr  * intent
+            bcon_val = oth_con * rel
+            ax.text(cx, sr_y, f"SR {bsr_val:.0f}",
+                    ha="center", va="center", color="white",
+                    fontsize=12, fontweight="bold", zorder=5)
+            ax.text(cx, con_y, f"Con {bcon_val:.0f}%",
+                    ha="center", va="center", color=(1, 1, 1, 0.85),
+                    fontsize=11, fontweight="bold", zorder=5)
+
+    _line_draw_stumps(ax)
+
+    ax.text(0.5, _ZONE_Y1 + 0.05, "Batter (SR, Control%)", ha="center", va="bottom",
+            color="white", fontsize=11.5, fontweight="bold", zorder=5, clip_on=False)
+    plt.tight_layout()
+    return fig
+
+
+def plot_line_intrel_pitch_avg(line_intrel_results, batter, bowl_kind, min_balls=10):
+    """
+    Front-on view: average batter SR and Control% by bowling line (neutral colors).
+    """
+    if bowl_kind == "pace bowler":
+        bowl_kind = "pace"
+    else:
+        bowl_kind = "spin"
+
+    data = line_intrel_results or {}
+    sr_d  = data.get("othsr",  {})
+    con_d = data.get("othcon", {})
+    if not all(isinstance(d, dict) for d in [sr_d, con_d]):
+        raise ValueError("Invalid avg line payload")
+
+    colors = ["#2563eb", "#16a34a"]
+    fig, ax = _line_base_fig()
+    color_idx = 0
+
+    for line, x0, x1, label in _LINE_ZONES:
+        sr,  bsr = _line_unpack(sr_d.get(line,  (np.nan, 0)))
+        con, bc  = _line_unpack(con_d.get(line, (np.nan, 0)))
+
+        balls = min(bsr, bc)
+        no_data = balls < min_balls or np.isnan(sr) or np.isnan(con)
+
+        if no_data:
+            fc = (0.22, 0.22, 0.22, 0.45)
+        else:
+            fc = colors[color_idx % 2]
+            color_idx += 1
+
+        ax.add_patch(patches.Rectangle(
+            (x0, _ZONE_Y0), x1 - x0, _ZONE_Y1 - _ZONE_Y0,
+            facecolor=fc, edgecolor=(1, 1, 1, 0.20), linewidth=0.8,
+            alpha=0.68 if not no_data else 1.0, zorder=2
+        ))
+
+        cx        = (x0 + x1) / 2
+        stump_top = _ZONE_Y0 + (_ZONE_Y1 - _ZONE_Y0) * _STUMP_FRAC
+        gap       = _ZONE_Y1 - stump_top
+        sr_y      = stump_top + gap * 0.72
+        con_y     = stump_top + gap * 0.35
+        label_y   = (_ZONE_Y0 + stump_top) / 2
+        if line == "ON_THE_STUMPS":
+            ax.text((_STUMP_XS[0] + _STUMP_XS[1]) / 2, label_y, "On",
+                    ha="center", va="center", color=(1, 1, 1, 1.0),
+                    fontsize=18, fontweight="bold", rotation=90, zorder=6)
+            ax.text((_STUMP_XS[1] + _STUMP_XS[2]) / 2, label_y, "Stumps",
+                    ha="center", va="center", color=(1, 1, 1, 1.0),
+                    fontsize=18, fontweight="bold", rotation=90, zorder=6)
+        else:
+            ax.text(cx, label_y, label,
+                    ha="center", va="center", color=(1, 1, 1, 1.0),
+                    fontsize=18, fontweight="bold", rotation=90, zorder=6)
+
+        if no_data:
+            ax.text(cx, sr_y, "—", ha="center", va="center",
+                    color=(1, 1, 1, 0.25), fontsize=14, zorder=5)
+        else:
+            ax.text(cx, sr_y, f"SR {sr:.0f}",
+                    ha="center", va="center", color="white",
+                    fontsize=12, fontweight="bold", zorder=5)
+            ax.text(cx, con_y, f"Con {con:.0f}%",
+                    ha="center", va="center", color=(1, 1, 1, 0.85),
+                    fontsize=11, fontweight="bold", zorder=5)
+
+    _line_draw_stumps(ax)
+
+    ax.text(0.5, _ZONE_Y1 + 0.05, "Avg Bat (SR, Control%)", ha="center", va="bottom",
+            color="white", fontsize=11.5, fontweight="bold", zorder=5, clip_on=False)
+    plt.tight_layout()
+    return fig
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # IPL Player Profile Card
 # ─────────────────────────────────────────────────────────────────────────────
 
