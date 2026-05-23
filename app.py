@@ -1778,19 +1778,21 @@ if active_view == "Analysis":
             try:
                 line_intrel_data = fetch_line_intrel_data(current_mode, selected_batter, selected_bowl_kind, selected_lengths)
                 line_payload = line_intrel_data.get("line_intrel_selected", {}) if line_intrel_data else {}
+                bat_style_short = str(player_meta.get("batting_style_short", "") or "").upper()
+                is_lhb = bat_style_short.startswith("L")
                 c1, c2, c3 = st.columns([1, 1, 1], gap="small")
                 with c1:
-                    st.pyplot(plot_line_intrel_pitch("intent_by_line", "Intent", line_payload, selected_batter, selected_bowl_kind, 5), use_container_width=True)
+                    st.pyplot(plot_line_intrel_pitch("intent_by_line", "Intent", line_payload, selected_batter, selected_bowl_kind, 5, is_lhb=is_lhb), use_container_width=True)
                 with c2:
-                    st.pyplot(plot_line_intrel_pitch("reliability_by_line", "Reliability", line_payload, selected_batter, selected_bowl_kind, 5), use_container_width=True)
+                    st.pyplot(plot_line_intrel_pitch("reliability_by_line", "Reliability", line_payload, selected_batter, selected_bowl_kind, 5, is_lhb=is_lhb), use_container_width=True)
                 with c3:
-                    st.pyplot(plot_line_intrel_pitch("intrel_by_line", "Int-Rel", line_payload, selected_batter, selected_bowl_kind, 5), use_container_width=True)
+                    st.pyplot(plot_line_intrel_pitch("intrel_by_line", "Int-Rel", line_payload, selected_batter, selected_bowl_kind, 5, is_lhb=is_lhb), use_container_width=True)
                 st.markdown('<div style="margin-top:-5rem;"></div>', unsafe_allow_html=True)
                 _, c4, c5, _ = st.columns([0.25, 1, 1, 0.25], gap="small")
                 with c4:
-                    st.pyplot(plot_line_intrel_pitch_batter(line_payload, selected_batter, selected_bowl_kind, 5), use_container_width=True)
+                    st.pyplot(plot_line_intrel_pitch_batter(line_payload, selected_batter, selected_bowl_kind, 5, is_lhb=is_lhb), use_container_width=True)
                 with c5:
-                    st.pyplot(plot_line_intrel_pitch_avg(line_payload, selected_batter, selected_bowl_kind, 5), use_container_width=True)
+                    st.pyplot(plot_line_intrel_pitch_avg(line_payload, selected_batter, selected_bowl_kind, 5, is_lhb=is_lhb), use_container_width=True)
             except Exception as _e:
                 st.warning(f"Line intent-reliability data unavailable: {_e}")
         st.markdown("""

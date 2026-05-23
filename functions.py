@@ -2588,7 +2588,14 @@ _LINE_ZONES = [
     ("ON_THE_STUMPS",         0.04 + 2*_ZONE_W, 0.04 + 3 * _ZONE_W,   "On Stumps"),
     ("DOWN_LEG",              0.04 + 3*_ZONE_W, 0.04 + 4 * _ZONE_W,   "Down Leg"),
 ]
-_STUMP_XS  = [0.50, 0.615, 0.73]   # off, middle, leg — edges/centre of ON_THE_STUMPS
+_STUMP_XS     = [0.50, 0.615, 0.73]          # RHB: stumps in zone 3 (ON_THE_STUMPS)
+_STUMP_XS_LHB = [0.04 + _ZONE_W, 0.04 + 1.5 * _ZONE_W, 0.04 + 2 * _ZONE_W]  # LHB: stumps in zone 2
+_LINE_ZONES_LHB = [                          # LHB: off side is on right, leg side on left
+    ("DOWN_LEG",              0.04,             0.04 + _ZONE_W,        "Down Leg"),
+    ("ON_THE_STUMPS",         0.04 + _ZONE_W,   0.04 + 2 * _ZONE_W,   "On Stumps"),
+    ("OUTSIDE_OFFSTUMP",      0.04 + 2*_ZONE_W, 0.04 + 3 * _ZONE_W,   "Outside Off"),
+    ("WIDE_OUTSIDE_OFFSTUMP", 0.04 + 3*_ZONE_W, 0.04 + 4 * _ZONE_W,   "Wide Off"),
+]
 _ZONE_Y0   = 0.12
 _ZONE_Y1   = 0.86
 _STUMP_FRAC = 0.80                  # stumps reach 80 % of zone height → H/W ≈ 2.3
@@ -2606,22 +2613,22 @@ def _line_base_fig():
     return fig, ax
 
 
-def _line_draw_stumps(ax):
+def _line_draw_stumps(ax, is_lhb=False):
     zone_h = _ZONE_Y1 - _ZONE_Y0
     sy0 = _ZONE_Y0
     sy1 = _ZONE_Y0 + zone_h * _STUMP_FRAC
-    for sx in _STUMP_XS:
+    sxs = _STUMP_XS_LHB if is_lhb else _STUMP_XS
+    for sx in sxs:
         ax.plot([sx, sx], [sy0, sy1], color="white", linewidth=2.0, zorder=10,
                 solid_capstyle="round")
-    ax.plot([_STUMP_XS[0], _STUMP_XS[1]], [sy1, sy1], color="white", linewidth=1.5, zorder=10)
-    ax.plot([_STUMP_XS[1], _STUMP_XS[2]], [sy1, sy1], color="white", linewidth=1.5, zorder=10)
-    # crease (spans only the 4 zones)
+    ax.plot([sxs[0], sxs[1]], [sy1, sy1], color="white", linewidth=1.5, zorder=10)
+    ax.plot([sxs[1], sxs[2]], [sy1, sy1], color="white", linewidth=1.5, zorder=10)
     ax.plot([0.04, 0.04 + 4 * _ZONE_W], [_ZONE_Y0, _ZONE_Y0],
             color=(1, 1, 1, 0.35), linewidth=1.5, zorder=3)
-    # off / leg labels
-    ax.text(0.04, _ZONE_Y0 - 0.025, "OFF", ha="left", va="top",
+    left_lbl, right_lbl = ("LEG", "OFF") if is_lhb else ("OFF", "LEG")
+    ax.text(0.04, _ZONE_Y0 - 0.025, left_lbl, ha="left", va="top",
             color=(1, 1, 1, 0.40), fontsize=7.5, style="italic")
-    ax.text(0.04 + 4 * _ZONE_W, _ZONE_Y0 - 0.025, "LEG", ha="right", va="top",
+    ax.text(0.04 + 4 * _ZONE_W, _ZONE_Y0 - 0.025, right_lbl, ha="right", va="top",
             color=(1, 1, 1, 0.40), fontsize=7.5, style="italic")
 
 
@@ -2639,10 +2646,9 @@ def _line_unpack(v):
     return np.nan, 0
 
 
-def plot_line_intrel_pitch(metric, heading, line_intrel_results, batter, bowl_kind, min_balls=10):
+def plot_line_intrel_pitch(metric, heading, line_intrel_results, batter, bowl_kind, min_balls=10, is_lhb=False):
     """
     Front-on (end-on) view: one intrel/intent/reliability metric by bowling line.
-    Left = off side, right = leg side. Stumps mark the ON_THE_STUMPS zone edges.
     """
     if bowl_kind == "pace bowler":
         bowl_kind = "pace"
@@ -2660,8 +2666,10 @@ def plot_line_intrel_pitch(metric, heading, line_intrel_results, batter, bowl_ki
     mapper = ScalarMappable(norm=norm, cmap=cmap)
 
     fig, ax = _line_base_fig()
+    zones = _LINE_ZONES_LHB if is_lhb else _LINE_ZONES
+    sxs   = _STUMP_XS_LHB  if is_lhb else _STUMP_XS
 
-    for line, x0, x1, label in _LINE_ZONES:
+    for line, x0, x1, label in zones:
         val, balls = _line_unpack(line_data.get(line, (np.nan, 0)))
         no_data = balls < min_balls or np.isnan(val)
         fc = (0.22, 0.22, 0.22, 0.45) if no_data else mapper.to_rgba(val)
@@ -2672,15 +2680,15 @@ def plot_line_intrel_pitch(metric, heading, line_intrel_results, batter, bowl_ki
             alpha=0.72 if not no_data else 1.0, zorder=2
         ))
 
-        cx     = (x0 + x1) / 2
+        cx        = (x0 + x1) / 2
         stump_top = _ZONE_Y0 + (_ZONE_Y1 - _ZONE_Y0) * _STUMP_FRAC
         val_y     = (stump_top + _ZONE_Y1) / 2
         label_y   = (_ZONE_Y0 + stump_top) / 2
         if line == "ON_THE_STUMPS":
-            ax.text((_STUMP_XS[0] + _STUMP_XS[1]) / 2, label_y, "On",
+            ax.text((sxs[0] + sxs[1]) / 2, label_y, "On",
                     ha="center", va="center", color=(1, 1, 1, 1.0),
                     fontsize=18, fontweight="bold", rotation=90, zorder=6)
-            ax.text((_STUMP_XS[1] + _STUMP_XS[2]) / 2, label_y, "Stumps",
+            ax.text((sxs[1] + sxs[2]) / 2, label_y, "Stumps",
                     ha="center", va="center", color=(1, 1, 1, 1.0),
                     fontsize=18, fontweight="bold", rotation=90, zorder=6)
         else:
@@ -2696,7 +2704,7 @@ def plot_line_intrel_pitch(metric, heading, line_intrel_results, batter, bowl_ki
                     ha="center", va="center", color="white",
                     fontsize=16, fontweight="bold", zorder=5)
 
-    _line_draw_stumps(ax)
+    _line_draw_stumps(ax, is_lhb=is_lhb)
 
     ax.text(0.5, _ZONE_Y1 + 0.05, heading, ha="center", va="bottom", color="white",
             fontsize=11.5, fontweight="bold", zorder=5, clip_on=False)
@@ -2704,7 +2712,7 @@ def plot_line_intrel_pitch(metric, heading, line_intrel_results, batter, bowl_ki
     return fig
 
 
-def plot_line_intrel_pitch_batter(line_intrel_results, batter, bowl_kind, min_balls=10):
+def plot_line_intrel_pitch_batter(line_intrel_results, batter, bowl_kind, min_balls=10, is_lhb=False):
     """
     Front-on view: estimated batter SR and Control% by bowling line.
     SR = othsr × intent, Control% = othcon × reliability.
@@ -2725,8 +2733,10 @@ def plot_line_intrel_pitch_batter(line_intrel_results, batter, bowl_kind, min_ba
     colors = ["#2563eb", "#16a34a"]
     fig, ax = _line_base_fig()
     color_idx = 0
+    zones = _LINE_ZONES_LHB if is_lhb else _LINE_ZONES
+    sxs   = _STUMP_XS_LHB  if is_lhb else _STUMP_XS
 
-    for line, x0, x1, label in _LINE_ZONES:
+    for line, x0, x1, label in zones:
         intent,  bi  = _line_unpack(intent_d.get(line,  (np.nan, 0)))
         rel,     br  = _line_unpack(rel_d.get(line,     (np.nan, 0)))
         oth_sr,  bsr = _line_unpack(oth_sr_d.get(line,  (np.nan, 0)))
@@ -2755,10 +2765,10 @@ def plot_line_intrel_pitch_batter(line_intrel_results, batter, bowl_kind, min_ba
         con_y     = stump_top + gap * 0.35
         label_y   = (_ZONE_Y0 + stump_top) / 2
         if line == "ON_THE_STUMPS":
-            ax.text((_STUMP_XS[0] + _STUMP_XS[1]) / 2, label_y, "On",
+            ax.text((sxs[0] + sxs[1]) / 2, label_y, "On",
                     ha="center", va="center", color=(1, 1, 1, 1.0),
                     fontsize=18, fontweight="bold", rotation=90, zorder=6)
-            ax.text((_STUMP_XS[1] + _STUMP_XS[2]) / 2, label_y, "Stumps",
+            ax.text((sxs[1] + sxs[2]) / 2, label_y, "Stumps",
                     ha="center", va="center", color=(1, 1, 1, 1.0),
                     fontsize=18, fontweight="bold", rotation=90, zorder=6)
         else:
@@ -2779,7 +2789,7 @@ def plot_line_intrel_pitch_batter(line_intrel_results, batter, bowl_kind, min_ba
                     ha="center", va="center", color=(1, 1, 1, 0.85),
                     fontsize=11, fontweight="bold", zorder=5)
 
-    _line_draw_stumps(ax)
+    _line_draw_stumps(ax, is_lhb=is_lhb)
 
     ax.text(0.5, _ZONE_Y1 + 0.05, "Batter (SR, Control%)", ha="center", va="bottom",
             color="white", fontsize=11.5, fontweight="bold", zorder=5, clip_on=False)
@@ -2787,7 +2797,7 @@ def plot_line_intrel_pitch_batter(line_intrel_results, batter, bowl_kind, min_ba
     return fig
 
 
-def plot_line_intrel_pitch_avg(line_intrel_results, batter, bowl_kind, min_balls=10):
+def plot_line_intrel_pitch_avg(line_intrel_results, batter, bowl_kind, min_balls=10, is_lhb=False):
     """
     Front-on view: average batter SR and Control% by bowling line (neutral colors).
     """
@@ -2805,8 +2815,10 @@ def plot_line_intrel_pitch_avg(line_intrel_results, batter, bowl_kind, min_balls
     colors = ["#2563eb", "#16a34a"]
     fig, ax = _line_base_fig()
     color_idx = 0
+    zones = _LINE_ZONES_LHB if is_lhb else _LINE_ZONES
+    sxs   = _STUMP_XS_LHB  if is_lhb else _STUMP_XS
 
-    for line, x0, x1, label in _LINE_ZONES:
+    for line, x0, x1, label in zones:
         sr,  bsr = _line_unpack(sr_d.get(line,  (np.nan, 0)))
         con, bc  = _line_unpack(con_d.get(line, (np.nan, 0)))
 
@@ -2832,10 +2844,10 @@ def plot_line_intrel_pitch_avg(line_intrel_results, batter, bowl_kind, min_balls
         con_y     = stump_top + gap * 0.35
         label_y   = (_ZONE_Y0 + stump_top) / 2
         if line == "ON_THE_STUMPS":
-            ax.text((_STUMP_XS[0] + _STUMP_XS[1]) / 2, label_y, "On",
+            ax.text((sxs[0] + sxs[1]) / 2, label_y, "On",
                     ha="center", va="center", color=(1, 1, 1, 1.0),
                     fontsize=18, fontweight="bold", rotation=90, zorder=6)
-            ax.text((_STUMP_XS[1] + _STUMP_XS[2]) / 2, label_y, "Stumps",
+            ax.text((sxs[1] + sxs[2]) / 2, label_y, "Stumps",
                     ha="center", va="center", color=(1, 1, 1, 1.0),
                     fontsize=18, fontweight="bold", rotation=90, zorder=6)
         else:
@@ -2854,7 +2866,7 @@ def plot_line_intrel_pitch_avg(line_intrel_results, batter, bowl_kind, min_balls
                     ha="center", va="center", color=(1, 1, 1, 0.85),
                     fontsize=11, fontweight="bold", zorder=5)
 
-    _line_draw_stumps(ax)
+    _line_draw_stumps(ax, is_lhb=is_lhb)
 
     ax.text(0.5, _ZONE_Y1 + 0.05, "Avg Bat (SR, Control%)", ha="center", va="bottom",
             color="white", fontsize=11.5, fontweight="bold", zorder=5, clip_on=False)
