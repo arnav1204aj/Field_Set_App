@@ -2538,9 +2538,9 @@ if active_view == "Rankings":
         # Fetch NEW rankings (primary display)
         rows_new = fetch_rankings(current_mode, rank_type_key, metric_key, version="new", top_n=0)
 
-        # Fetch OLD rankings for rank-change calculation (Men's T20 only)
+        # Fetch OLD rankings for rank-change calculation
         old_rank_map: Dict[str, int] = {}
-        if current_mode == "MENS_T20" and rows_new:
+        if current_mode in ("MENS_T20", "WOMENS_T20") and rows_new:
             rows_old = fetch_rankings(current_mode, rank_type_key, metric_key, version="old", top_n=0)
             if rows_old:
                 old_df = pd.DataFrame(rows_old).reset_index(drop=True)
@@ -2580,9 +2580,9 @@ if active_view == "Rankings":
                     control = int(round(float(row.get("control_factor", 0) or 0)))
                     overall = int(round(float(row.get("composite_rank_score", 0) or 0)))
 
-                    # Rank change badge (Men's T20 only)
+                    # Rank change badge
                     rank_change_html = ""
-                    if current_mode == "MENS_T20" and old_rank_map:
+                    if current_mode in ("MENS_T20", "WOMENS_T20") and old_rank_map:
                         player_name = str(row.get("batter", ""))
                         old_rank = old_rank_map.get(player_name)
                         if old_rank is not None:
