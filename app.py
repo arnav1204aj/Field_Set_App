@@ -161,7 +161,7 @@ def fetch_outfielders(mode: str, batter: str, bowl_kind: str, lengths: List[str]
 
 @st.cache_data(ttl=600, max_entries=50)
 def fetch_matchups(mode: str, batter: str) -> Optional[Dict]:
-    """Fetch bowl-style matchup efficiency data from backend (MENS_T20 only)."""
+    """Fetch bowl-style matchup efficiency data from backend (MENS_T20 and WOMENS_T20)."""
     response = make_request(f"/matchups/{mode}/{batter}")
     return response if response else None
 
@@ -271,7 +271,7 @@ def fetch_feat_data(mode: str, batter: str, bowl_kind: str, lengths: List[str]) 
 
 @st.cache_data(ttl=600, max_entries=50)
 def fetch_weakness(mode: str, batter: str) -> Optional[Dict]:
-    """Fetch certainty of weakness data from backend (MENS_T20 only)."""
+    """Fetch certainty of weakness data from backend (MENS_T20 and WOMENS_T20)."""
     response = make_request(f"/entropy/{mode}/{batter}")
     return response if response else None
 
@@ -293,7 +293,7 @@ def fetch_intrel_data(mode: str, batter: str, bowl_kind: str, lengths: List[str]
 
 @st.cache_data(ttl=600, max_entries=50)
 def fetch_line_intrel_data(mode: str, batter: str, bowl_kind: str, lengths: List[str]) -> Optional[Dict]:
-    """Fetch line-based intent-reliability data from backend (MENS_T20 only)."""
+    """Fetch line-based intent-reliability data from backend (MENS_T20 and WOMENS_T20)."""
     response = make_request(
         "/line-intrel-data",
         method="POST",
@@ -1641,7 +1641,7 @@ if active_view == "Analysis":
                 </div>
                 """, unsafe_allow_html=True)
 
-        if current_mode == "MENS_T20":
+        if current_mode in ("MENS_T20", "WOMENS_T20"):
             try:
                 feat_resp = fetch_feat_data(current_mode, selected_batter, selected_bowl_kind, selected_lengths)
                 feat_data = feat_resp.get('feat_data', {}) if feat_resp else {}
@@ -1756,7 +1756,7 @@ if active_view == "Analysis":
     if submit and "Intent, Reliability, Int-Rel by line" in selected_sections:
         st.markdown('---')
         st.markdown('<p class="section-header">Intent, Reliability, Int-Rel by line</p>', unsafe_allow_html=True)
-        if current_mode != "MENS_T20":
+        if current_mode == "MENS_ODI":
             st.markdown(
                 """
                 <div style="
@@ -1944,7 +1944,7 @@ if active_view == "Analysis":
         st.markdown('---')
         st.markdown('<p class="section-header">Matchups</p>', unsafe_allow_html=True)
 
-        if current_mode in ("WOMENS_T20", "MENS_ODI"):
+        if current_mode == "MENS_ODI":
             st.markdown(
                 """
                 <div style="
@@ -2157,7 +2157,7 @@ if active_view == "Analysis":
         st.markdown('---')
         st.markdown('<p class="section-header">Certainty of Weakness</p>', unsafe_allow_html=True)
         st.markdown("<div style='margin-top:0.75rem;'></div>", unsafe_allow_html=True)
-        if current_mode in ("WOMENS_T20", "MENS_ODI"):
+        if current_mode == "MENS_ODI":
             st.markdown(
                 """
                 <div style="
