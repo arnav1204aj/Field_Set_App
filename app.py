@@ -1228,16 +1228,16 @@ st.markdown("---")
 # Tabs
 # ─────────────────────────────
 BASE_VIEW_OPTIONS = ["Analysis", "Compare", "Rankings", "Information"]
-if current_mode == "MENS_T20":
-    VIEW_OPTIONS = ["Analysis", "IPL Batter Profiles", "Compare", "Rankings", "Information"]
+if current_mode == "WOMENS_T20":
+    VIEW_OPTIONS = ["Analysis", "WC Profiles", "Compare", "Rankings", "Information"]
 else:
     VIEW_OPTIONS = BASE_VIEW_OPTIONS
 
 if "active_view" not in st.session_state or st.session_state["active_view"] not in VIEW_OPTIONS:
     st.session_state["active_view"] = "Analysis"
 
-# Glowing CSS for the IPL Profiles tab
-if current_mode == "MENS_T20":
+# Glowing CSS for the WC Profiles tab
+if current_mode == "WOMENS_T20":
     st.markdown("""
     <style>
     @keyframes profileGlow {
@@ -1245,7 +1245,7 @@ if current_mode == "MENS_T20":
         50%  { box-shadow: 0 0 16px rgba(255,170,0,0.85), 0 0 32px rgba(255,170,0,0.45), 0 0 48px rgba(255,100,0,0.2); }
         100% { box-shadow: 0 0 6px rgba(255,170,0,0.5), 0 0 12px rgba(255,170,0,0.25); }
     }
-    /* Target the 2nd tab (0-indexed: 1) which is IPL Profiles */
+    /* Target the 2nd tab which is WC Profiles */
     .stTabs [data-baseweb="tab-list"] button:nth-child(2),
     div[data-baseweb="tab-list"] > button:nth-child(2) {
         animation: profileGlow 2.2s ease-in-out infinite;
@@ -2680,63 +2680,57 @@ if active_view == "Rankings":
                 )
 
 # ─────────────────────────────
-# IPL Player Profiles Tab (MENS_T20 only)
+# Women's WC Profiles Tab (WOMENS_T20 only)
 # ─────────────────────────────
-if active_view == "IPL Batter Profiles":
-    # Collapse sidebar for this tab
+if active_view == "WC Profiles":
     st.markdown("""
     <style>
     section[data-testid="stSidebar"] { display: none; }
-    @keyframes headerGlow {
-        0%   { text-shadow: 0 0 8px rgba(255,200,0,0.6); }
-        50%  { text-shadow: 0 0 24px rgba(255,200,0,0.95), 0 0 48px rgba(255,140,0,0.5); }
-        100% { text-shadow: 0 0 8px rgba(255,200,0,0.6); }
+    @keyframes wcHeaderGlow {
+        0%   { text-shadow: 0 0 8px rgba(0,120,220,0.6); }
+        50%  { text-shadow: 0 0 24px rgba(0,180,255,0.95), 0 0 48px rgba(0,100,200,0.5); }
+        100% { text-shadow: 0 0 8px rgba(0,120,220,0.6); }
     }
-    .ipl-profile-header {
+    .wc-profile-header {
         text-align: center;
         font-size: 2.4rem;
         font-weight: 900;
-        color: #FFD700;
-        animation: headerGlow 2.5s ease-in-out infinite;
+        color: #60c8ff;
+        animation: wcHeaderGlow 2.5s ease-in-out infinite;
         margin-bottom: 0.3rem;
         letter-spacing: 1.5px;
         text-transform: uppercase;
     }
-    .ipl-profile-sub {
+    .wc-profile-sub {
         text-align: center;
         font-size: 1.05rem;
-        color: rgba(255,215,0,0.75);
+        color: rgba(96,200,255,0.75);
         margin-bottom: 1.5rem;
     }
     </style>
-    <p class="ipl-profile-header">IPL Batter Profiles</p>
-    <p class="ipl-profile-sub">Select a player to view their detailed batting profile card with pace &amp; spin rankings (since 2024)</p>
+    <p class="wc-profile-header">Women's T20 Batter Profiles</p>
+    <p class="wc-profile-sub">Select a player to view their detailed batting profile card with pace &amp; spin rankings</p>
     """, unsafe_allow_html=True)
 
-    # Load batter list from local IPL rankings CSV
-    _ipl_df = pd.read_csv("paceranks_ipl.csv")
-    _profile_batters = sorted(_ipl_df["batter"].dropna().unique().tolist())
-    if not _profile_batters:
+    _wc_pace_df = pd.read_csv("wpaceranks_w_t20.csv")
+    _wc_profile_batters = sorted(_wc_pace_df["batter"].dropna().unique().tolist())
+    if not _wc_profile_batters:
         st.error("No batters available.")
     else:
-        default_profile = "Virat Kohli" if "Virat Kohli" in _profile_batters else _profile_batters[0]
         selected_profile_player = st.selectbox(
             "Select Player",
-            _profile_batters,
-            index=_profile_batters.index(default_profile) if default_profile in _profile_batters else 0,
-            key="profile_player_select",
+            _wc_profile_batters,
+            index=0,
+            key="wc_profile_player_select",
         )
 
-        if st.button("Generate Profile Card", use_container_width=True, key="gen_profile_btn"):
+        if st.button("Generate Profile Card", use_container_width=True, key="gen_wc_profile_btn"):
             with st.spinner("Building profile card..."):
-                # Fetch player image + team from backend using raw request
-                # (make_request calls st.stop() on 404, which we don't want here)
                 img_url = None
                 team_abbr = None
-                player_in_ipl = False
                 try:
                     _img_resp = requests.get(
-                        f"{BACKEND_URL}/player-image/{selected_profile_player}",
+                        f"{BACKEND_URL}/player-image/{selected_profile_player}?mode=WOMENS_T20",
                         headers=API_HEADERS,
                         timeout=REQUEST_TIMEOUT,
                     )
@@ -2744,24 +2738,17 @@ if active_view == "IPL Batter Profiles":
                         _img_data = _img_resp.json()
                         img_url = _img_data.get("image_url")
                         team_abbr = _img_data.get("team")
-                        if img_url:
-                            player_in_ipl = True
                 except Exception:
                     pass
 
-                # Load IPL-specific pace & spin rankings from local CSVs
-                _pace_df = pd.read_csv("paceranks_ipl.csv")
-                _spin_df = pd.read_csv("spinranks_ipl.csv")
-                pace_rows = _pace_df.to_dict(orient="records")
-                spin_rows = _spin_df.to_dict(orient="records")
+                _wc_spin_df = pd.read_csv("wspinranks_w_t20.csv")
+                pace_rows = _wc_pace_df.to_dict(orient="records")
+                spin_rows = _wc_spin_df.to_dict(orient="records")
 
-                # Check if player exists in at least one ranking list
                 in_pace = any(str(r.get("batter", "")).strip() == selected_profile_player.strip() for r in pace_rows)
                 in_spin = any(str(r.get("batter", "")).strip() == selected_profile_player.strip() for r in spin_rows)
 
-                if not player_in_ipl:
-                    st.warning(f"{selected_profile_player} is not playing in IPL 2026.")
-                elif not in_pace and not in_spin:
+                if not in_pace and not in_spin:
                     st.warning(f"Not enough sample size available for {selected_profile_player}.")
                 else:
                     fig = generate_player_profile_card(
@@ -2770,8 +2757,8 @@ if active_view == "IPL Batter Profiles":
                         spin_rankings=spin_rows,
                         image_url=img_url,
                         team_abbr=team_abbr,
+                        use_wc_teams=True,
                     )
-
                     if fig is None:
                         st.warning(f"Not enough sample size available for {selected_profile_player}.")
                     else:

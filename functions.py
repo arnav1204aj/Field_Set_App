@@ -2892,6 +2892,21 @@ _TEAM_META_BY_ABBR = {
     "SRH":  {"primary": "#FF671F", "secondary": "#000000", "logo": "logos/srh.png"},
 }
 
+_WC_TEAM_META_BY_ABBR = {
+    "AUS": {"primary": "#FFD700", "secondary": "#00843D", "logo": "logos/aus.png"},
+    "BAN": {"primary": "#006A4E", "secondary": "#F42A41", "logo": "logos/ban.png"},
+    "ENG": {"primary": "#1C3F7A", "secondary": "#CF142B", "logo": "logos/eng.png"},
+    "IND": {"primary": "#003580", "secondary": "#FF9933", "logo": "logos/ind.png"},
+    "IRE": {"primary": "#169B62", "secondary": "#FFFFFF",  "logo": "logos/ire.png"},
+    "NED": {"primary": "#003DA5", "secondary": "#FF6600", "logo": "logos/ned.png"},
+    "NZ":  {"primary": "#1A1A1A", "secondary": "#CCCCCC", "logo": "logos/nz.png"},
+    "PAK": {"primary": "#01411C", "secondary": "#C8D8E8", "logo": "logos/pak.png"},
+    "SCO": {"primary": "#003DA5", "secondary": "#FFFFFF",  "logo": "logos/sco.png"},
+    "SA":  {"primary": "#007A4D", "secondary": "#FFB81C", "logo": "logos/sa.png"},
+    "SL":  {"primary": "#003087", "secondary": "#FFBE00", "logo": "logos/sl.png"},
+    "WI":  {"primary": "#6D2B3D", "secondary": "#FFD700", "logo": "logos/wi.png"},
+}
+
 
 def _pp_luminance(hex_color: str) -> float:
     r, g, b = mcolors.to_rgb(hex_color)
@@ -2984,6 +2999,7 @@ def generate_player_profile_card(
     spin_rankings: list,
     image_url: str | None = None,
     team_abbr: str | None = None,
+    use_wc_teams: bool = False,
 ) -> plt.Figure | None:
     """
     Generate a matplotlib player profile card.
@@ -3042,7 +3058,8 @@ def generate_player_profile_card(
         return None
 
     # Team metadata
-    meta = _TEAM_META_BY_ABBR.get((team_abbr or "").upper(), {})
+    _meta_lookup = _WC_TEAM_META_BY_ABBR if use_wc_teams else _TEAM_META_BY_ABBR
+    meta = _meta_lookup.get((team_abbr or "").upper(), {})
     primary = meta.get("primary", "#444444")
     secondary = meta.get("secondary", "#222222")
     abbr = (team_abbr or "???").upper()
@@ -3098,7 +3115,7 @@ def generate_player_profile_card(
         # Empty silhouette placeholder
         ax.text(img_cx, hero_bot + hero_h / 2, "👤",
                 fontsize=60, ha="center", va="center",
-                color="rgba(255,255,255,0.15)", zorder=5)
+                color=(1, 1, 1, 0.15), zorder=5)
 
     # Text block
     tx = (PAD + panel_w + 0.6) if has_image else (PAD + panel_w + 0.6)
@@ -3118,10 +3135,10 @@ def generate_player_profile_card(
             ha="left", va="center", family="sans-serif", zorder=5)
 
     # Team logo
-    logo = _pp_load_logo(logo_file, target_h=60)
+    logo = _pp_load_logo(logo_file, target_h=35)
     if logo:
         ab_logo = AnnotationBbox(logo,
-                                 (fig_w - PAD - 0.8, hero_top - 0.55),
+                                 (fig_w - PAD - 0.45, hero_top - 0.35),
                                  frameon=False, zorder=5)
         ax.add_artist(ab_logo)
 
