@@ -1,5 +1,5 @@
 import streamlit as st
-st.set_page_config(layout="wide", page_title="Optimal Field Setting | Cricket Analytics")
+st.set_page_config(layout="wide", page_title="Batter Analysis | Cricket Analytics")
 
 import pandas as pd
 import numpy as np
@@ -1142,7 +1142,7 @@ if (
         st.stop()
 
 # Header
-mode_title = MODES.get(current_mode, 'Optimal Field Setting')
+mode_title = MODES.get(current_mode, 'Batter Analysis')
 
 # Load logo as base64
 import base64
