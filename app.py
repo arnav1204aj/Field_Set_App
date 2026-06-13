@@ -1159,7 +1159,7 @@ st.markdown(f"""
         <img src="{logo_data_url}" alt="Logo" style="height: clamp(60px, 12vw, 140px); width: auto; object-fit: contain;">
     </a>
     <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
-        <h1 class="main-title" style="margin: 0;">{mode_title} - Optimal Field Setting</h1>
+        <h1 class="main-title" style="margin: 0;">{mode_title} - Batter Analysis</h1>
         <div class="author-info" style="margin: 0.3rem 0 0 0; padding: 0; border: none;">
             <span class="author-name">Arnav Jain | IITK</span>
             <a href="https://x.com/arnav1204aj" target="_blank" class="author-link">@arnav1204aj</a>
